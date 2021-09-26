@@ -26,4 +26,9 @@ class DigestUtil(private val hashFunction: HashFunction) {
             .setSizeBytes(array.size.toLong())
             .build()
     }
+    fun compute(content: String) : Digest {
+        val array = content.encodeToByteArray()
+        val hash = hashFunction.hashBytes(array).toString()
+        return Digest.newBuilder().setHash(hash).setSizeBytes(array.size.toLong()).build()
+    }
 }

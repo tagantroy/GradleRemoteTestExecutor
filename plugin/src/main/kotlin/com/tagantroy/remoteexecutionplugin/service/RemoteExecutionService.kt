@@ -29,10 +29,6 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
 
     val digestUtil = DigestUtil(Hashing.sha256())
 
-    private fun upload(command: Command, action: Action) {
-
-    }
-
     private fun uploadToCas(message: GeneratedMessageV3): BatchUpdateBlobsResponse {
         val digest = digestUtil.compute(message)
         val actionUploadRequest = BatchUpdateBlobsRequest.Request.newBuilder().setData(message.toByteString()).setDigest(digest).build()
@@ -43,7 +39,8 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
 
     fun execute() {
         val command = Command.newBuilder()
-            .addAllArguments(listOf("echo", "Hello \$NAME"))
+//            .addAllArguments(listOf("echo","Hello World", ">", "test.txt"))
+            .addAllArguments(listOf("eval 'echo \"\$NAME\"' > test.txt" ))
             .addEnvironmentVariables(Command.EnvironmentVariable.newBuilder().setName("NAME").build())
             .setPlatform(
                 Platform.newBuilder()
@@ -54,18 +51,17 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
                         Platform.Property.newBuilder().setName("container-image").setValue("docker://marketplace.gcr.io/google/rbe-ubuntu16-04@sha256:f6568d8168b14aafd1b707019927a63c2d37113a03bcee188218f99bd0327ea1").build()
                     )
                     .build())
-//            .addOutputPaths()
-//            .setWorkingDirectory("root/")
+            .addOutputPaths("test.txt")
             .build()
 
         val commandDigest = digestUtil.compute(command)
-
-        val actionInputRootDigest = Digest.newBuilder().build()
+        val inputRootPath = ""
+        val actionInputRootDigest = digestUtil.compute(inputRootPath)
 
         val uploadCommandResponse = uploadToCas(command)
 
         val action = Action.newBuilder()
-            .setDoNotCache(false)
+//            .setDoNotCache(true)
             .setInputRootDigest(actionInputRootDigest)
             .setTimeout(Duration.newBuilder().setSeconds(600).build())
             .setCommandDigest(commandDigest)
@@ -86,10 +82,18 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
 
         val request =  ExecuteRequest.newBuilder().setInstanceName("remote-execution").setActionDigest(actionDigest).setSkipCacheLookup(true).build()
         val response = execution.execute(request)
+
         response.forEach {
-            print(it)
+            print("execute: ${it}" )
         }
         print("asdf")
+        val req = GetActionResultRequest.newBuilder().setInstanceName("remote-execution").setActionDigest(actionDigest).build()
+        val res = actionCache.getActionResult(req)
+        print("asdf")
+        res.stdoutDigest
+
+        val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
+        print("sadfasdf")
     }
 
 
