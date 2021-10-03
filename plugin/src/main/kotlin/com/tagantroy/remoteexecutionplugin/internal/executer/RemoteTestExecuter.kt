@@ -9,7 +9,6 @@ import org.gradle.api.internal.tasks.testing.TestClassProcessor
 import org.gradle.api.internal.tasks.testing.TestExecuter
 import org.gradle.api.internal.tasks.testing.TestResultProcessor
 import org.gradle.api.internal.tasks.testing.detection.DefaultTestClassScanner
-import org.gradle.api.internal.tasks.testing.detection.DefaultTestExecuter
 import org.gradle.api.internal.tasks.testing.filter.DefaultTestFilter
 import org.gradle.api.internal.tasks.testing.processors.*
 import org.gradle.api.internal.tasks.testing.worker.ForkingTestClassProcessor
@@ -33,10 +32,13 @@ class RemoteTestExecuter(
     override fun execute(testExecutionSpec: JvmTestExecutionSpec, testResultProcessor: TestResultProcessor) {
         val testFramework = testExecutionSpec.testFramework
         val testInstanceFactory = testFramework.processorFactory
+
         val currentWorkerLease: WorkerLeaseRegistry.WorkerLease = workerLeaseRegistry.getCurrentWorkerLease()
+
         val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath)
         val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
         val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
+
         val forkingProcessorFactory: Factory<TestClassProcessor> =
             Factory {
                 ForkingTestClassProcessor(
@@ -52,15 +54,14 @@ class RemoteTestExecuter(
                     documentationRegistry
                 )
             }
-        val reforkingProcessorFactory: Factory<TestClassProcessor> =
-            Factory { RestartEveryNTestClassProcessor(forkingProcessorFactory, testExecutionSpec.forkEvery) }
+
         val processor = PatternMatchTestClassProcessor(
             testFilter,
             RunPreviousFailedFirstTestClassProcessor(
                 testExecutionSpec.previousFailedTestClasses,
                 MaxNParallelTestClassProcessor(
                     getMaxParallelForks(testExecutionSpec),
-                    reforkingProcessorFactory,
+                    forkingProcessorFactory,
                     actorFactory
                 )
             )
@@ -77,15 +78,16 @@ class RemoteTestExecuter(
             DefaultTestClassScanner(testClassFiles, null, processor)
         }
 
+        val reProcessor = RETestClassProcessor(remoteExecutionService, testExecutionSpec)
+
         TestMainAction(
             detector,
-            processor,
+            reProcessor,
             testResultProcessor,
             clock,
             testExecutionSpec.path,
             "Gradle Test Run " + testExecutionSpec.identityPath
         ).run()
-
     }
 
     override fun stopNow() {

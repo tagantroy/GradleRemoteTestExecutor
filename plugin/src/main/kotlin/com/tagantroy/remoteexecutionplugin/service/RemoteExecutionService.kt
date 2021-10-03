@@ -6,6 +6,7 @@ import com.google.protobuf.Duration
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Channel
 import io.grpc.ManagedChannelBuilder
+import java.io.File
 
 data class Config(val host: String) {
 
@@ -36,8 +37,7 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
         return cas.batchUpdateBlobs(request)
     }
 
-
-    fun execute() {
+    fun execute(inputs: List<File>) {
         val command = Command.newBuilder()
 //            .addAllArguments(listOf("echo","Hello World", ">", "test.txt"))
             .addAllArguments(listOf("eval 'echo \"\$NAME\"' > test.txt" ))
@@ -94,11 +94,5 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
 
         val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
         print("sadfasdf")
-    }
-
-
-    fun cache() {
-        val request = GetActionResultRequest.newBuilder().build();
-        val response = actionCache.getActionResult(request)
     }
 }

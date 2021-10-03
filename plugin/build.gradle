@@ -19,6 +19,7 @@ def protobufVersion = '3.17.2'
 def protocVersion = protobufVersion
 
 dependencies {
+    implementation(gradleApi())
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
