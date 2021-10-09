@@ -8,12 +8,10 @@ import io.grpc.Channel
 import io.grpc.ManagedChannelBuilder
 import java.io.File
 
-data class Config(val host: String) {
 
-}
 
-fun createRemoteExecutionService(config: Config): RemoteExecutionService {
-    val channel = ManagedChannelBuilder.forTarget(config.host)
+fun createRemoteExecutionService(host: String): RemoteExecutionService {
+    val channel = ManagedChannelBuilder.forTarget(host)
         .usePlaintext()
         .enableRetry()
         .build()
@@ -25,8 +23,7 @@ fun createRemoteExecutionService(config: Config): RemoteExecutionService {
 
 class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.ContentAddressableStorageBlockingStub,
                              private val execution: ExecutionGrpc.ExecutionBlockingStub,
-                             private val actionCache: ActionCacheGrpc.ActionCacheBlockingStub,
-                             ) {
+                             private val actionCache: ActionCacheGrpc.ActionCacheBlockingStub) {
 
     val digestUtil = DigestUtil(Hashing.sha256())
 

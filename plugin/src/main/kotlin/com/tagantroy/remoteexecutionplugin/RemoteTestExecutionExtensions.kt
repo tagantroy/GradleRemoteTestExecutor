@@ -4,4 +4,5 @@ import org.gradle.api.provider.Property
 
 interface RemoteTestExecutionExtensions {
     val enabled: Property<Boolean>
+    val host: Property<String>
 }

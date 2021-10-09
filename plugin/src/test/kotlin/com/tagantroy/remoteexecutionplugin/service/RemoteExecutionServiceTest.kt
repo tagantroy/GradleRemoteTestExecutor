@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class RemoteExecutionServiceTest {
-    val config = Config("localhost:8980")
-    val service = createRemoteExecutionService(config)
+    val host = "localhost:8980"
+    val service = createRemoteExecutionService(host)
 
     @Test
     fun testUpload(){
