@@ -1,37 +1,51 @@
 package com.tagantroy.remoteexecutionplugin
 
 import com.tagantroy.remoteexecutionplugin.internal.executer.RemoteTestExecuter
-import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import com.tagantroy.remoteexecutionplugin.service.createRemoteExecutionService
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.TestExecuter
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.testing.Test
-import org.gradle.util.internal.VersionNumber
+import org.gradle.api.tasks.testing.TestFilter
+import org.gradle.internal.time.Clock
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import javax.inject.Inject
 
-
-class RemoteTestExecutionPlugin @Inject constructor(val objectFactory: ObjectFactory, val providerFactory: ProviderFactory) : Plugin<Project> {
+class RemoteTestExecutionPlugin @Inject constructor(
+    val objectFactory: ObjectFactory,
+    val providerFactory: ProviderFactory,
+    val moduleRegistry: ModuleRegistry,
+    val clock: Clock,
+) : Plugin<Project> {
     override fun apply(project: Project) {
-        if(pluginAlreadyApplied(project)){
+        if (pluginAlreadyApplied(project)) {
             return
         }
+        val extension = project.extensions.create("remoteTestExecutor",RemoteTestExecutionExtensions::class.java)
         project.tasks.withType(Test::class.java).configureEach {
-            configureTestTask(it, objectFactory, providerFactory)
+            configureTestTask(it, objectFactory, providerFactory, extension)
         }
     }
 
-    private fun configureTestTask(task: Test, objectFactory: ObjectFactory, providerFactory: ProviderFactory) {
+    private fun configureTestTask(
+        task: Test,
+        objectFactory: ObjectFactory,
+        providerFactory: ProviderFactory,
+        extension: RemoteTestExecutionExtensions
+    ) {
 //        val gradleVersion = VersionNumber.parse(task.project.gradle.gradleVersion)
-        val extension = objectFactory.newInstance(RemoteTestExecutionExtensions::class.java)
-        task.doFirst(ConditionalTaskAction({extension.enabled.get()}, InitTaskAction()))
-//        task.doLast()
+        task.doFirst(
+            ConditionalTaskAction(
+                { extension.enabled.get() },
+                InitTaskAction(extension, moduleRegistry, clock)
+            )
+        )
     }
 
     private fun pluginAlreadyApplied(project: Project): Boolean {
@@ -39,39 +53,53 @@ class RemoteTestExecutionPlugin @Inject constructor(val objectFactory: ObjectFac
     }
 }
 
-class ConditionalTaskAction(val predicate: (Task)->Boolean,val action: Action<Task>) : Action<Task> {
+class ConditionalTaskAction(val predicate: (Task) -> Boolean, val action: Action<Task>) : Action<Task> {
     override fun execute(t: Task) {
-        if(predicate(t)){
+        if (predicate(t)) {
             action.execute(t)
         }
     }
 }
 
-fun createRemoteTestExecuter(task: Task, objectFactory: ObjectFactory, extensions: RemoteTestExecutionExtensions): RemoteTestExecuter {
+fun createRemoteTestExecuter(
+    extensions: RemoteTestExecutionExtensions,
+    moduleRegistry: ModuleRegistry,
+    clock: Clock,
+    testFilter: TestFilter,
+): RemoteTestExecuter {
     val host = extensions.host.get()
     val service = createRemoteExecutionService(host)
-    return RemoteTestExecuter(service,)
+    return RemoteTestExecuter(service, moduleRegistry, clock, testFilter)
 }
 
-class InitTaskAction(val objectFactory: ObjectFactory) : Action<Task>{
+class InitTaskAction(
+    private val extension: RemoteTestExecutionExtensions,
+    private val moduleRegistry: ModuleRegistry,
+    private val clock: Clock,
+) :
+    Action<Task> {
     override fun execute(task: Task) {
-        setTestExecuter(task, createRemoteTestExecuter(task, objectFactory))
+        val testTask = task as Test
+        setTestExecuter(
+            task,
+            createRemoteTestExecuter(extension, moduleRegistry, clock, testTask.filter)
+        )
     }
 }
 
-class FinalizeTaskAction : Action<Task>{
+class FinalizeTaskAction : Action<Task> {
     override fun execute(t: Task) {
 
     }
-
 }
 
-fun setTestExecuter(task: Test, executer: RemoteTestExecuter) {
+fun setTestExecuter(task: Task, executer: RemoteTestExecuter) {
     invoke<Void>(
         declaredMethod(Test::class.java, "setTestExecuter", TestExecuter::class.java)!!,
         task, executer
     )
 }
+
 private fun declaredMethod(type: Class<*>, methodName: String, vararg paramTypes: Class<*>): Method? {
     return try {
         makeAccessible(type.getDeclaredMethod(methodName, *paramTypes))

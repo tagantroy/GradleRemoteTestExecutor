@@ -4,7 +4,6 @@ import build.bazel.remote.execution.v2.*;
 import com.google.common.hash.Hashing
 import com.google.protobuf.Duration
 import com.google.protobuf.GeneratedMessageV3
-import io.grpc.Channel
 import io.grpc.ManagedChannelBuilder
 import java.io.File
 

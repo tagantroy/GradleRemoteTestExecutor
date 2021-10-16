@@ -1,4 +1,4 @@
 rootProject.name = "RemoteTestExecutor"
 
-include(":plugin")
-include(":sample")
+includeBuild("plugin/remote-test-executor")
+include("sample-project")

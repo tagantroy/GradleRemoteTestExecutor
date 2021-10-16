@@ -1,0 +1,54 @@
+package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.classlevel
+
+import com.google.common.collect.ImmutableSet
+import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
+import org.gradle.api.internal.classpath.ModuleRegistry
+import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
+import org.gradle.api.internal.tasks.testing.TestResultProcessor
+import org.gradle.api.internal.tasks.testing.detection.DefaultTestClassScanner
+import org.gradle.api.internal.tasks.testing.processors.TestMainAction
+import org.gradle.api.tasks.testing.TestFilter
+import org.gradle.internal.time.Clock
+import java.io.File
+
+
+class ClassLevelIsolationAction(
+    private val remoteExecutionService: RemoteExecutionService,
+    private val testExecutionSpec: JvmTestExecutionSpec,
+    private val testResultProcessor: TestResultProcessor,
+    private val testFilter: TestFilter,
+    private val moduleRegistry: ModuleRegistry,
+    val clock: Clock
+) : Runnable {
+    override fun run() {
+        val testFramework = testExecutionSpec.testFramework
+
+        val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath)
+        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
+        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
+        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
+
+        testFilter.excludePatterns
+        testFilter.includePatterns
+        testFilter.isFailOnNoMatchingTests
+
+        val testClassFiles = testExecutionSpec.candidateClassFiles
+        val processor = RETestClassProcessor(remoteExecutionService, testExecutionSpec)
+        val detector = if (testExecutionSpec.isScanForTestClasses && testFramework.detector != null) {
+            val testFrameworkDetector = testFramework.detector
+            testFrameworkDetector.setTestClasses(testExecutionSpec.testClassesDirs.files)
+            testFrameworkDetector.setTestClasspath(classpath)
+            DefaultTestClassScanner(testClassFiles, testFrameworkDetector, processor)
+        } else {
+            DefaultTestClassScanner(testClassFiles, null, processor)
+        }
+        TestMainAction(
+            detector,
+            processor,
+            testResultProcessor,
+            clock,
+            testExecutionSpec.path,
+            "Gradle Test Run " + testExecutionSpec.identityPath
+        ).run()
+    }
+}

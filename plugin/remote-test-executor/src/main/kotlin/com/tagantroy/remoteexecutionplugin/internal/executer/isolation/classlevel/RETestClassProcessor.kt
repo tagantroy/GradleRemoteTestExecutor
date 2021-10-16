@@ -1,4 +1,4 @@
-package com.tagantroy.remoteexecutionplugin.internal.executer
+package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.classlevel
 
 import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec

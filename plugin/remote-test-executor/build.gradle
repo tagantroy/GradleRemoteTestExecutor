@@ -6,7 +6,9 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-version 'unspecified'
+group "com.tagantroy"
+description "Use Remote API to run unit tests"
+version "1.0.0"
 
 repositories {
     maven { // The google mirror is less flaky than mavenCentral()
@@ -17,6 +19,40 @@ repositories {
 def grpcVersion = '1.40.0'
 def protobufVersion = '3.17.2'
 def protocVersion = protobufVersion
+//
+gradlePlugin {
+    plugins {
+        register("RemoteTestExecutor") {
+            id = "com.tagantroy.remote-test-executor"
+            displayName = "Gradle Remote Test Executor"
+            description = project.description
+            implementationClass = "com.tagantroy.remoteexecutionplugin.RemoteTestExecutionPlugin"
+        }
+    }
+}
+
+
+//Z
+//publishing {
+//    publications {
+//        register<MavenPublication>("plugin") {
+//            artifactId = "test-retry-gradle-plugin"
+//            artifact(shadowJar.get()) {
+//                classifier = null
+//            }
+//        }
+//    }
+//    repositories {
+//        maven {
+//            name = "GradleBuildInternalSnapshots"
+//            url = uri("https://repo.gradle.org/gradle/libs-snapshots-local")
+//            credentials {
+//                username = project.findProperty("artifactoryUsername") as String?
+//                        password = project.findProperty("artifactoryPassword") as String?
+//            }
+//        }
+//    }
+//}
 
 dependencies {
     implementation(gradleApi())
