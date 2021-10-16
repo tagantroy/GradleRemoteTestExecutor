@@ -32,6 +32,21 @@ class ModuleLevelIsolationAction(
         println("excludePatterns = ${testFilter.excludePatterns}")
         println("includePatterns = ${testFilter.includePatterns}")
         println("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
+
+        val mergedClasspath = classpath.joinToString(":")
+        val process = ProcessBuilder() // java -jar junit-platform-console-standalone-1.8.1.jar
+            .command("/home/ivanbalaksha/.sdkman/candidates/java/current/bin/java",
+                "-jar",
+                "junit-platform-console-standalone-1.8.1.jar",
+                "-cp",
+                mergedClasspath,
+                "--scan-classpath",
+                "--reports-dir",
+                "./report",
+            )
+            .inheritIO()
+        val rs = process.start().waitFor()
+        println(rs)
     }
 }
 
