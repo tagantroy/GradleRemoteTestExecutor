@@ -4,7 +4,9 @@ import build.bazel.remote.execution.v2.*;
 import com.google.common.hash.Hashing
 import com.google.protobuf.Duration
 import com.google.protobuf.GeneratedMessageV3
+import com.tagantroy.remoteexecutionplugin.internal.executer.RemoteTestExecuter
 import io.grpc.ManagedChannelBuilder
+import org.gradle.api.logging.Logging
 import java.io.File
 
 
@@ -24,20 +26,29 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
                              private val execution: ExecutionGrpc.ExecutionBlockingStub,
                              private val actionCache: ActionCacheGrpc.ActionCacheBlockingStub) {
 
-    val digestUtil = DigestUtil(Hashing.sha256())
+    private val digestUtil = DigestUtil(Hashing.sha256())
+    private val logger = Logging.getLogger(RemoteTestExecuter::class.java)
 
     private fun uploadToCas(message: GeneratedMessageV3): BatchUpdateBlobsResponse {
+        logger.info("Upload to cas")
         val digest = digestUtil.compute(message)
         val actionUploadRequest = BatchUpdateBlobsRequest.Request.newBuilder().setData(message.toByteString()).setDigest(digest).build()
         val request = BatchUpdateBlobsRequest.newBuilder().addRequests(actionUploadRequest).build()
         return cas.batchUpdateBlobs(request)
     }
 
-    fun execute(inputs: List<File>) {
+    fun execute(arguments: List<String>, environment: Map<String, Any>, inputs: List<File>) {
+        logger.info("Execute action with arguments: $arguments")
+        logger.info("Execute action with environment: $environment")
+        logger.info("Execute action with inputs: $inputs")
         val command = Command.newBuilder()
-//            .addAllArguments(listOf("echo","Hello World", ">", "test.txt"))
-            .addAllArguments(listOf("eval 'echo \"\$NAME\"' > test.txt" ))
-            .addEnvironmentVariables(Command.EnvironmentVariable.newBuilder().setName("NAME").build())
+            .addAllArguments(arguments)
+            .addAllEnvironmentVariables(environment.entries.map {
+                Command.EnvironmentVariable.newBuilder()
+                    .setName(it.key)
+                    .setValue(it.value.toString())
+                    .build()
+            })
             .setPlatform(
                 Platform.newBuilder()
                     .addProperties(
@@ -51,11 +62,13 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
             .build()
 
         val commandDigest = digestUtil.compute(command)
+        logger.info("Command digest: ${commandDigest.hash}")
+
         val inputRootPath = ""
         val actionInputRootDigest = digestUtil.compute(inputRootPath)
 
         val uploadCommandResponse = uploadToCas(command)
-
+        logger.info("Build action")
         val action = Action.newBuilder()
 //            .setDoNotCache(true)
             .setInputRootDigest(actionInputRootDigest)
@@ -77,6 +90,7 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
         val uploadActionResponse = uploadToCas(action)
 
         val request =  ExecuteRequest.newBuilder().setInstanceName("remote-execution").setActionDigest(actionDigest).setSkipCacheLookup(true).build()
+        logger.info("Execute action")
         val response = execution.execute(request)
 
         response.forEach {
@@ -89,6 +103,5 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
         res.stdoutDigest
 
         val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
-        print("sadfasdf")
     }
 }

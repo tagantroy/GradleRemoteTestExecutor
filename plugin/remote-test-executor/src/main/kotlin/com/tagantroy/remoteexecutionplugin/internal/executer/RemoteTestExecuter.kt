@@ -18,14 +18,14 @@ class RemoteTestExecuter(
     private val testFilter: TestFilter
 ) : TestExecuter<JvmTestExecutionSpec> {
 
-    private val LOGGER = Logging.getLogger(RemoteTestExecuter::class.java)
+    private val logger = Logging.getLogger(RemoteTestExecuter::class.java)
 
     override fun execute(testExecutionSpec: JvmTestExecutionSpec, testResultProcessor: TestResultProcessor) {
         if(classLevelIsolation()) {
-            LOGGER.info("Execute with class level isolation")
+            logger.info("Execute with class level isolation")
             ClassLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock).run()
         } else {
-            LOGGER.info("Execute with module level isolation")
+            logger.info("Execute with module level isolation")
             ModuleLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock).run()
         }
     }

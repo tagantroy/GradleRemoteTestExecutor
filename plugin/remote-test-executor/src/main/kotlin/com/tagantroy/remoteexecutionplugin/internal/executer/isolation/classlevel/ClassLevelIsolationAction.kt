@@ -7,6 +7,7 @@ import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
 import org.gradle.api.internal.tasks.testing.TestResultProcessor
 import org.gradle.api.internal.tasks.testing.detection.DefaultTestClassScanner
 import org.gradle.api.internal.tasks.testing.processors.TestMainAction
+import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
 import java.io.File
@@ -20,6 +21,7 @@ class ClassLevelIsolationAction(
     private val moduleRegistry: ModuleRegistry,
     val clock: Clock
 ) : Runnable {
+    private val logger = Logging.getLogger(ClassLevelIsolationAction::class.java)
     override fun run() {
         val testFramework = testExecutionSpec.testFramework
 
@@ -42,6 +44,7 @@ class ClassLevelIsolationAction(
         } else {
             DefaultTestClassScanner(testClassFiles, null, processor)
         }
+        logger.info("Run TestMainAction with RETestClassProcessor")
         TestMainAction(
             detector,
             processor,

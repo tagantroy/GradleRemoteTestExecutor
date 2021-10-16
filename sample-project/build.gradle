@@ -12,7 +12,7 @@ repositories {
 
 remoteTestExecutor {
     enabled = true
-    host = "localhost"
+    host = "localhost:8980"
 }
 
 dependencies {
