@@ -8,11 +8,13 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.TestExecuter
+import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
+import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import javax.inject.Inject
@@ -23,27 +25,35 @@ class RemoteTestExecutionPlugin @Inject constructor(
     val moduleRegistry: ModuleRegistry,
     val clock: Clock,
 ) : Plugin<Project> {
+    private val logger = Logging.getLogger(RemoteTestExecutionPlugin::class.java)
     override fun apply(project: Project) {
         if (pluginAlreadyApplied(project)) {
             return
         }
+//        project.afterEvaluate {
+//            it.dependencies.add("testRuntimeOnly","org.junit.platform:junit-platform-console-standalone:1.8.1")
+//        }
+
+
         val extension = project.extensions.create("remoteTestExecutor",RemoteTestExecutionExtensions::class.java)
         project.tasks.withType(Test::class.java).configureEach {
-            configureTestTask(it, objectFactory, providerFactory, extension)
+            configureTestTask(it, extension, project)
         }
     }
 
     private fun configureTestTask(
         task: Test,
-        objectFactory: ObjectFactory,
-        providerFactory: ProviderFactory,
-        extension: RemoteTestExecutionExtensions
+        extension: RemoteTestExecutionExtensions,
+    project: Project
     ) {
 //        val gradleVersion = VersionNumber.parse(task.project.gradle.gradleVersion)
+        val projectRootDir = project.rootProject.rootDir
+        val buildDir = project.buildDir
+        val gradleUserHomeDir = project.gradle.gradleUserHomeDir
         task.doFirst(
             ConditionalTaskAction(
                 { extension.enabled.get() },
-                InitTaskAction(extension, moduleRegistry, clock)
+                InitTaskAction(extension, moduleRegistry, clock, projectRootDir, buildDir, gradleUserHomeDir)
             )
         )
     }
@@ -66,23 +76,29 @@ fun createRemoteTestExecuter(
     moduleRegistry: ModuleRegistry,
     clock: Clock,
     testFilter: TestFilter,
+    projectRoot: File,
+    buildDir: File,
+    gradleUserHomeDir: File,
 ): RemoteTestExecuter {
     val host = extensions.host.get()
     val service = createRemoteExecutionService(host)
-    return RemoteTestExecuter(service, moduleRegistry, clock, testFilter)
+    return RemoteTestExecuter(service, moduleRegistry, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
 }
 
 class InitTaskAction(
     private val extension: RemoteTestExecutionExtensions,
     private val moduleRegistry: ModuleRegistry,
     private val clock: Clock,
+    private val projectRoot: File,
+    private val buildDir: File,
+    private val gradleUserHomeDir: File,
 ) :
     Action<Task> {
     override fun execute(task: Task) {
         val testTask = task as Test
         setTestExecuter(
             task,
-            createRemoteTestExecuter(extension, moduleRegistry, clock, testTask.filter)
+            createRemoteTestExecuter(extension, moduleRegistry, clock, testTask.filter, projectRoot, buildDir, gradleUserHomeDir)
         )
     }
 }

@@ -8,8 +8,7 @@ import com.tagantroy.remoteexecutionplugin.internal.executer.RemoteTestExecuter
 import io.grpc.ManagedChannelBuilder
 import org.gradle.api.logging.Logging
 import java.io.File
-
-
+import java.nio.file.Path
 
 fun createRemoteExecutionService(host: String): RemoteExecutionService {
     val channel = ManagedChannelBuilder.forTarget(host)
@@ -37,7 +36,7 @@ class RemoteExecutionService(private val cas: ContentAddressableStorageGrpc.Cont
         return cas.batchUpdateBlobs(request)
     }
 
-    fun execute(arguments: List<String>, environment: Map<String, Any>, inputs: List<File>) {
+    fun execute(arguments: List<String>, environment: Map<String, Any>, inputs: List<Path>) {
         logger.info("Execute action with arguments: $arguments")
         logger.info("Execute action with environment: $environment")
         logger.info("Execute action with inputs: $inputs")

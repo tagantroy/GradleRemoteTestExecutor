@@ -7,8 +7,15 @@ import org.gradle.api.internal.tasks.testing.TestClassProcessor
 import org.gradle.api.internal.tasks.testing.TestClassRunInfo
 import org.gradle.api.internal.tasks.testing.TestResultProcessor
 import org.gradle.api.logging.Logging
+import java.io.File
 
-class RETestClassProcessor(val service: RemoteExecutionService, val testExecutionSpec: JvmTestExecutionSpec) : TestClassProcessor {
+class RETestClassProcessor(
+    val service: RemoteExecutionService,
+    val testExecutionSpec: JvmTestExecutionSpec,
+    val rootProjectDir: File,
+    val buildDir: File,
+    val gradleUserHomeDir: File,
+) : TestClassProcessor {
     private val logger = Logging.getLogger(RETestClassProcessor::class.java)
     override fun startProcessing(resultProcessor: TestResultProcessor) {
         // Initialize connection and etc
@@ -19,24 +26,35 @@ class RETestClassProcessor(val service: RemoteExecutionService, val testExecutio
 
         // Start execution
         val classpath = testExecutionSpec.classpath
-        val framework = testExecutionSpec.testFramework
-        val modulePath = testExecutionSpec.modulePath
-        val candidateClassFiles = testExecutionSpec.candidateClassFiles
-        val path = testExecutionSpec.path
-        val identityPath = testExecutionSpec.identityPath
-        val forkEvery = testExecutionSpec.forkEvery
-        val javaForkOptions = testExecutionSpec.javaForkOptions
-        println("classpath: $classpath")
-        println("framework: ${framework.options}")
-        println("modulePath: $modulePath")
-        println("candidateClassFiles: $candidateClassFiles")
-        println("path: $path")
-        println("identityPath: $identityPath")
-        println("forkEvery: $forkEvery")
-        println("javaForkOptions: $javaForkOptions")
-        println("classpath: $classpath")
+//        val framework = testExecutionSpec.testFramework
+//        val modulePath = testExecutionSpec.modulePath
+//        val candidateClassFiles = testExecutionSpec.candidateClassFiles
+//        val path = testExecutionSpec.path
+//        val identityPath = testExecutionSpec.identityPath
+//        val forkEvery = testExecutionSpec.forkEvery
+//        val javaForkOptions = testExecutionSpec.javaForkOptions
+//        println("classpath: $classpath")
+//        println("framework: ${framework.options}")
+//        println("modulePath: $modulePath")
+//        println("candidateClassFiles: $candidateClassFiles")
+//        println("path: $path")
+//        println("identityPath: $identityPath")
+//        println("forkEvery: $forkEvery")
+//        println("javaForkOptions: $javaForkOptions")
+//        println("classpath: $classpath")
+        val junitPlatformConsole = File("$rootProjectDir/junit-platform-console-standalone-1.8.1.jar").toPath()
+        val fixedClasspath = classpath.map {
+            if (it.absolutePath.startsWith(rootProjectDir.absolutePath)) {
+                rootProjectDir.toPath().relativize(it.toPath())
+            } else if (it.absolutePath.startsWith(gradleUserHomeDir.path)) {
+                gradleUserHomeDir.toPath().relativize(it.toPath())
+            } else {
+                logger.error("Cannot relativize")
+                it.toPath()
+            }
+        }
 
-        val mergedClasspath = classpath.joinToString(":")
+        val mergedClasspath = fixedClasspath.joinToString(":")
         val arguments = listOf(
             "java",
             "-jar",
@@ -49,7 +67,7 @@ class RETestClassProcessor(val service: RemoteExecutionService, val testExecutio
             "--select-class=${testClass.testClassName}"
         )
         logger.info("Execute remote action")
-        service.execute(arguments, mapOf(), ImmutableList.copyOf(classpath))
+        service.execute(arguments, mapOf(), ImmutableList.copyOf(fixedClasspath+junitPlatformConsole))
     }
 
     override fun stop() {

@@ -19,23 +19,27 @@ class ClassLevelIsolationAction(
     private val testResultProcessor: TestResultProcessor,
     private val testFilter: TestFilter,
     private val moduleRegistry: ModuleRegistry,
-    val clock: Clock
+    private val clock: Clock,
+    private val rootProjectDir: File,
+    private val buildDir: File,
+    private val gradleUserHomeDir: File,
 ) : Runnable {
     private val logger = Logging.getLogger(ClassLevelIsolationAction::class.java)
     override fun run() {
         val testFramework = testExecutionSpec.testFramework
 
         val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath)
-        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
-        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
-        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
+//        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
+//        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
+//        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
 
-        testFilter.excludePatterns
-        testFilter.includePatterns
-        testFilter.isFailOnNoMatchingTests
+//        testFilter.excludePatterns
+//        testFilter.includePatterns
+//        testFilter.isFailOnNoMatchingTests
 
         val testClassFiles = testExecutionSpec.candidateClassFiles
-        val processor = RETestClassProcessor(remoteExecutionService, testExecutionSpec)
+        val processor =
+            RETestClassProcessor(remoteExecutionService, testExecutionSpec, rootProjectDir, buildDir, gradleUserHomeDir)
         val detector = if (testExecutionSpec.isScanForTestClasses && testFramework.detector != null) {
             val testFrameworkDetector = testFramework.detector
             testFrameworkDetector.setTestClasses(testExecutionSpec.testClassesDirs.files)
