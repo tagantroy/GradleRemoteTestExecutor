@@ -10,15 +10,6 @@ import kotlin.math.log
 
 data class REPath(val relativePath: Path, val absolutePath: Path)
 
-fun buildFakeFileTree(input: Set<File>): Node {
-    val root = Node("")
-    input.forEach {
-        if (it.isFile) {
-
-        }
-    }
-    return root
-}
 
 class Node(val name: String) {
     val nodes = mutableMapOf<String, Node>()
@@ -32,21 +23,41 @@ class Node(val name: String) {
             nodes[name]!!
         }
     }
+
+    var file = false
+    var path: Path? = null
 }
 
 
 class FakeFileTree() {
     val root = Node("")
-    fun insertFile(fakePath: Path, realPath: Path) {
+    fun insert(rePath: REPath) {
+        val fakePath = rePath.relativePath
         val iter = fakePath.toString().split("/").iterator()
-        var curNode = Node(iter.next())
+        var curNode = root
         while (iter.hasNext()) {
             val curValue = iter.next()
-            if (!iter.hasNext()) {
-                curNode = curNode.getOrCreate(curValue)
-            }
+            curNode = curNode.getOrCreate(curValue)
         }
+        curNode.file = true
+        curNode.path = rePath.absolutePath
+    }
+}
 
+private val logger = Logging.getLogger(FileManager::class.java)
+
+fun relativePath(file: File, rootProjectDir: File, gradleUserHomeDir: File): Path {
+    return when {
+        file.absolutePath.startsWith(rootProjectDir.absolutePath) -> {
+            rootProjectDir.toPath().relativize(file.toPath())
+        }
+        file.absolutePath.startsWith(gradleUserHomeDir.path) -> {
+            gradleUserHomeDir.toPath().relativize(file.toPath())
+        }
+        else -> {
+            logger.error("Cannot relativize")
+            file.toPath()
+        }
     }
 }
 
@@ -59,17 +70,30 @@ class FileManager(
     private val logger = Logging.getLogger(FileManager::class.java)
 
     fun relativePathsFromVirtualRoot(): List<Path> {
-        return input.map {
-            if (it.absolutePath.startsWith(rootProjectDir.absolutePath)) {
-                rootProjectDir.toPath().relativize(it.toPath())
-            } else if (it.absolutePath.startsWith(gradleUserHomeDir.path)) {
-                gradleUserHomeDir.toPath().relativize(it.toPath())
-            } else {
-                logger.error("Cannot relativize")
-                it.toPath()
+        return input.map { relativePath(it, rootProjectDir, gradleUserHomeDir) }
+    }
+
+    fun buildFakeFileTree(): FakeFileTree {
+        val tree = FakeFileTree()
+        input.forEach {
+            if (it.isFile) {
+                tree.insert(REPath(relativePath(it, rootProjectDir, gradleUserHomeDir), it.absoluteFile.toPath()))
+            } else if (it.isDirectory) {
+                it.walk().forEach {
+                    if (it.isFile) {
+                        tree.insert(
+                            REPath(
+                                relativePath(it, rootProjectDir, gradleUserHomeDir),
+                                it.absoluteFile.toPath()
+                            )
+                        )
+                    }
+                }
             }
         }
+        return tree
     }
+
 
     fun build() {
         val directory = Directory.newBuilder()

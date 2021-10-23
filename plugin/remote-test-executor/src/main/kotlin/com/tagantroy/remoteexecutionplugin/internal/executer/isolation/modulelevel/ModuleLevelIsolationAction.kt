@@ -56,6 +56,7 @@ class ModuleLevelIsolationAction(
             "./report"
         )
         logger.info("Execute remote action")
+        val tree = fileManager.buildFakeFileTree()
         remoteExecutionService.execute(arguments, mapOf(), ImmutableList.copyOf(fixedClasspath+junitPlatformConsole))
     }
 }
