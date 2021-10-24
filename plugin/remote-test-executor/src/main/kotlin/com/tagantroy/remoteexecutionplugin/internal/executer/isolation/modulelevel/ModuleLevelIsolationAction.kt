@@ -41,7 +41,7 @@ class ModuleLevelIsolationAction(
 //        logger.debug("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
 
         // TODO add support for filters
-        val fileManager = FileManager(rootProjectDir, buildDir, gradleUserHomeDir, classpath)
+        val fileManager = FileManager(rootProjectDir, buildDir, gradleUserHomeDir, classpath, remoteExecutionService)
         val fixedClasspath = fileManager.relativePathsFromVirtualRoot()
         val mergedClasspath = fixedClasspath.joinToString(":")
         val junitPlatformConsole = File("$rootProjectDir/junit-platform-console-standalone-1.8.1.jar").toPath()
@@ -57,7 +57,7 @@ class ModuleLevelIsolationAction(
         )
         logger.info("Execute remote action")
         val tree = fileManager.buildFakeFileTree()
-        remoteExecutionService.execute(arguments, mapOf(), ImmutableList.copyOf(fixedClasspath+junitPlatformConsole))
+        remoteExecutionService.execute(arguments, mapOf(), fileManager.upload())
     }
 }
 

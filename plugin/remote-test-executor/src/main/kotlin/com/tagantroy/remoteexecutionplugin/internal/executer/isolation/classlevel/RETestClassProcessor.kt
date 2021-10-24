@@ -67,7 +67,7 @@ class RETestClassProcessor(
             "--select-class=${testClass.testClassName}"
         )
         logger.info("Execute remote action")
-        service.execute(arguments, mapOf(), ImmutableList.copyOf(fixedClasspath+junitPlatformConsole))
+//        service.execute(arguments, mapOf(), ImmutableList.copyOf(fixedClasspath+junitPlatformConsole))
     }
 
     override fun stop() {
