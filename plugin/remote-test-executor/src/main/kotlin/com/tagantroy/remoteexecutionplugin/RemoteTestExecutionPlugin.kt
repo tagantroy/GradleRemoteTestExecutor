@@ -20,9 +20,7 @@ import java.lang.reflect.Method
 import javax.inject.Inject
 
 class RemoteTestExecutionPlugin @Inject constructor(
-    val objectFactory: ObjectFactory,
-    val providerFactory: ProviderFactory,
-    val moduleRegistry: ModuleRegistry,
+    private val moduleRegistry: ModuleRegistry,
     val clock: Clock,
 ) : Plugin<Project> {
     private val logger = Logging.getLogger(RemoteTestExecutionPlugin::class.java)
@@ -30,10 +28,6 @@ class RemoteTestExecutionPlugin @Inject constructor(
         if (pluginAlreadyApplied(project)) {
             return
         }
-//        project.afterEvaluate {
-//            it.dependencies.add("testRuntimeOnly","org.junit.platform:junit-platform-console-standalone:1.8.1")
-//        }
-
 
         val extension = project.extensions.create("remoteTestExecutor",RemoteTestExecutionExtensions::class.java)
         project.tasks.withType(Test::class.java).configureEach {
@@ -46,7 +40,6 @@ class RemoteTestExecutionPlugin @Inject constructor(
         extension: RemoteTestExecutionExtensions,
     project: Project
     ) {
-//        val gradleVersion = VersionNumber.parse(task.project.gradle.gradleVersion)
         val projectRootDir = project.rootProject.rootDir
         val buildDir = project.buildDir
         val gradleUserHomeDir = project.gradle.gradleUserHomeDir
@@ -100,12 +93,6 @@ class InitTaskAction(
             task,
             createRemoteTestExecuter(extension, moduleRegistry, clock, testTask.filter, projectRoot, buildDir, gradleUserHomeDir)
         )
-    }
-}
-
-class FinalizeTaskAction : Action<Task> {
-    override fun execute(t: Task) {
-
     }
 }
 

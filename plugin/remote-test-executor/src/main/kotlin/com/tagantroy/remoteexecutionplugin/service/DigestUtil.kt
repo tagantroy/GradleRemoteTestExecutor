@@ -1,22 +1,17 @@
 package com.tagantroy.remoteexecutionplugin.service
 
-import build.bazel.remote.execution.v2.Action;
-import build.bazel.remote.execution.v2.Digest;
-import build.bazel.remote.execution.v2.Command;
+import build.bazel.remote.execution.v2.Action
+import build.bazel.remote.execution.v2.Command
+import build.bazel.remote.execution.v2.Digest
 import build.bazel.remote.execution.v2.Directory
 import com.google.common.hash.HashCode
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import com.google.protobuf.ByteString
 import com.google.protobuf.GeneratedMessageV3
-import org.gradle.internal.impldep.it.unimi.dsi.fastutil.Hash
-import java.io.BufferedReader
 import java.nio.charset.Charset
 import java.nio.file.Path
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
+import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.readBytes
 
 val SHA256 = DigestUtil(Hashing.sha256())
@@ -38,11 +33,8 @@ class DigestUtil(private val hashFunction: HashFunction) {
         return Digest.newBuilder().setHash(hashCode.toString()).setSizeBytes(sizeBytes).build()
     }
 
-    @OptIn(kotlin.io.path.ExperimentalPathApi::class)
+    @OptIn(ExperimentalPathApi::class)
     fun hash(path: Path): HashCode {
-
-//        val stream = HashingInputStream(hashFunction, path.inputStream())
-//        return stream.hash()
         return hashFunction.hashBytes(path.readBytes())
     }
 
@@ -75,6 +67,7 @@ class DigestUtil(private val hashFunction: HashFunction) {
     }
 
     fun compute(dir: Directory, sizeBytes: Long): Digest {
-        return Digest.newBuilder().setHash(hashFunction.hashBytes(dir.toByteArray()).toString()).setSizeBytes(sizeBytes).build()
+        return Digest.newBuilder().setHash(hashFunction.hashBytes(dir.toByteArray()).toString()).setSizeBytes(sizeBytes)
+            .build()
     }
 }

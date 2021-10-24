@@ -2,21 +2,16 @@ package com.tagantroy.remoteexecutionplugin
 
 import build.bazel.remote.execution.v2.*
 import com.google.common.hash.HashCode
-import com.google.common.hash.HashingInputStream
 import com.google.protobuf.ByteString
-import com.tagantroy.remoteexecutionplugin.service.DigestUtil
 import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import com.tagantroy.remoteexecutionplugin.service.SHA256
 import org.gradle.api.logging.Logging
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
 import kotlin.io.path.readBytes
-import kotlin.math.log
 
 data class REPath(val relativePath: Path, val absolutePath: Path)
-
 
 class Node(val name: String, val currentVirtualPath: String, val file: Boolean) {
     val nodes = mutableMapOf<String, Node>()
@@ -61,7 +56,7 @@ class FakeFileTree() {
         }
     }
 
-    fun calculateHashForFile(path: Path): HashCode {
+    private fun calculateHashForFile(path: Path): HashCode {
         return SHA256.hash(path)
     }
 
@@ -69,16 +64,16 @@ class FakeFileTree() {
         reqCalculateHash(root);
     }
 
-    fun reqCalculateHash(node: Node) {
+    private fun reqCalculateHash(node: Node) {
         if (node.file) {
             return
         } else {
-            node.nodes.forEach { t, u ->
+            node.nodes.forEach { (_, u) ->
                 reqCalculateHash(u)
             }
             node.hash =
-                SHA256.hashUnordered(listOf(SHA256.hash(node.currentVirtualPath)) + node.nodes.values.map { it.hash }
-                    .filterNotNull().toList())
+                SHA256.hashUnordered(listOf(SHA256.hash(node.currentVirtualPath)) + node.nodes.values.mapNotNull { it.hash }
+                    .toList())
         }
     }
 }
@@ -151,17 +146,23 @@ class FileManager(
     @OptIn(kotlin.io.path.ExperimentalPathApi::class)
     private fun reqUpload(node: Node): Digest {
         if (node.file) {
+            val dataDigest = SHA256.compute(node.hash!!, node.sizeBytes!!)
             val dataRequest = BatchUpdateBlobsRequest.Request.newBuilder()
-                .setDigest(SHA256.compute(node.hash!!, node.sizeBytes!!))
-//                .setData(ByteString.readFrom(node.path!!.inputStream()))
-                .setData( ByteString.copyFrom(node.path!!.readBytes()))
+                .setDigest(dataDigest)
+                .setData(ByteString.copyFrom(node.path!!.readBytes()))
                 .build()
-
-
-//            val updateRequest = BatchUpdateBlobsRequest.newBuilder().addRequests(dataRequest).addRequests(fileNodeRequest).build()
-            val updateRequest =
-                BatchUpdateBlobsRequest.newBuilder().addRequests(dataRequest).setInstanceName("remote-execution")
-                    .build()
+            val fileNode = FileNode.newBuilder().setName(node.name).setDigest(
+                dataDigest
+            ).setIsExecutable(true).build()
+            val fileNodeRequest = BatchUpdateBlobsRequest.Request.newBuilder()
+                .setData(fileNode.toByteString())
+                .setDigest(SHA256.compute(fileNode))
+                .build()
+            val updateRequest = BatchUpdateBlobsRequest.newBuilder()
+                .addRequests(dataRequest)
+                .addRequests(fileNodeRequest)
+                .setInstanceName("remote-execution")
+                .build()
             val res = service.upload(updateRequest)
             logger.info("Upload file: ${node.currentVirtualPath} with res: $res")
             return res.getResponses(0).digest
@@ -193,20 +194,5 @@ class FileManager(
             logger.info("Upload dir: $dir with res: $res")
             return res.getResponses(0).digest
         }
-    }
-
-    private fun visitDirectory() {
-
-    }
-
-    fun buildMerkleTree() {
-        val directoryNode =
-            DirectoryNode.newBuilder().setName("asdf").setDigest(Digest.newBuilder().setHash("").build()).build()
-        val fileNode = FileNode.newBuilder()
-            .setDigest(Digest.newBuilder().setHash("asdf").build())
-            .setIsExecutable(true)
-            .setName("asdf")
-            .build()
-        val directory = Directory.newBuilder().addDirectories(directoryNode).build()
     }
 }

@@ -1,15 +1,12 @@
 package com.tagantroy.remoteexecutionplugin.service
 
-import build.bazel.remote.execution.v2.*;
-import com.google.common.hash.Hashing
+import build.bazel.remote.execution.v2.*
 import com.google.protobuf.Duration
 import com.google.protobuf.GeneratedMessageV3
+import com.tagantroy.remoteexecutionplugin.config.Config
 import com.tagantroy.remoteexecutionplugin.internal.executer.RemoteTestExecuter
 import io.grpc.ManagedChannelBuilder
 import org.gradle.api.logging.Logging
-import java.io.File
-import java.lang.RuntimeException
-import java.nio.file.Path
 
 fun createRemoteExecutionService(host: String): RemoteExecutionService {
     val channel = ManagedChannelBuilder.forTarget(host)
@@ -46,10 +43,14 @@ class RemoteExecutionService(
         return upload(request)
     }
 
-    fun execute(arguments: List<String>, environment: Map<String, Any>, inputDigest: Digest) {
+    fun execute(arguments: List<String>, environment: Map<String, Any>, inputDigest: Digest, config: Config) {
         val capabilities =
-            cabailities.getCapabilities(GetCapabilitiesRequest.newBuilder().setInstanceName("remote-execution").build())
-        if(capabilities.executionCapabilities.digestFunction != DigestFunction.Value.SHA256){
+            cabailities.getCapabilities(
+                GetCapabilitiesRequest.newBuilder()
+                    .setInstanceName(config.instance)
+                    .build()
+            )
+        if (capabilities.executionCapabilities.digestFunction != DigestFunction.Value.SHA256) {
             throw RuntimeException("GOOOSH")
         }
         logger.info("Capabilities: $capabilities")
@@ -63,65 +64,49 @@ class RemoteExecutionService(
                     .setValue(it.value.toString())
                     .build()
             })
-            .setPlatform(
-                Platform.newBuilder()
-                    .addProperties(
-                        Platform.Property.newBuilder().setName("OSFamily").setValue("Linux").build()
-                    )
-                    .addProperties(
-                        Platform.Property.newBuilder().setName("container-image")
-                            .setValue("docker://marketplace.gcr.io/google/rbe-ubuntu16-04@sha256:f6568d8168b14aafd1b707019927a63c2d37113a03bcee188218f99bd0327ea1")
-                            .build()
-                    )
-                    .build()
-            )
+            .setPlatform(Platform.newBuilder().addAllProperties(config.platform.toProperties()).build())
             .addOutputPaths("test.txt")
             .build()
 
         val commandDigest = digestUtil.compute(command)
         logger.info("Command digest: ${commandDigest.hash}")
 
-
         val uploadCommandResponse = uploadToCas(command)
+        logger.info("upload command response: ${uploadCommandResponse.responsesList.first()}")
+
         logger.info("Build action")
         val action = Action.newBuilder()
-            .setDoNotCache(true)
-            .setInputRootDigest(Digest.newBuilder(inputDigest).setSizeBytes(64).build())
-            .setTimeout(Duration.newBuilder().setSeconds(600).build())
+            .setDoNotCache(config.doNotCache)
+            .setInputRootDigest(inputDigest)
+            .setTimeout(Duration.newBuilder().setSeconds(config.timeoutSeconds).build())
             .setCommandDigest(commandDigest)
-            .setPlatform(
-                Platform.newBuilder()
-                    .addProperties(
-                        Platform.Property.newBuilder().setName("OSFamily").setValue("Linux").build()
-                    )
-                    .addProperties(
-                        Platform.Property.newBuilder().setName("container-image")
-                            .setValue("docker://marketplace.gcr.io/google/rbe-ubuntu16-04@sha256:f6568d8168b14aafd1b707019927a63c2d37113a03bcee188218f99bd0327ea1")
-                            .build()
-                    )
-                    .build()
-            )
+            .setPlatform(Platform.newBuilder().addAllProperties(config.platform.toProperties()).build())
             .build()
 
         val actionDigest = digestUtil.compute(action)
 
         val uploadActionResponse = uploadToCas(action)
+        logger.info("Upload action response: ${uploadActionResponse.responsesList.first()}")
 
-        val request = ExecuteRequest.newBuilder().setInstanceName("remote-execution").setActionDigest(actionDigest)
-            .setSkipCacheLookup(true).build()
+        val request = ExecuteRequest.newBuilder()
+            .setInstanceName(config.instance)
+            .setActionDigest(actionDigest)
+            .setSkipCacheLookup(true) //TODO: remove
+            .build()
         logger.info("Execute action")
         val response = execution.execute(request)
 
         response.forEach {
-            print("execute: ${it}")
+            logger.info("execute: $it")
         }
-        print("asdf")
-        val req = GetActionResultRequest.newBuilder().setInstanceName("remote-execution").setActionDigest(actionDigest)
-            .build()
-        val res = actionCache.getActionResult(req)
-        print("asdf")
-        res.stdoutDigest
+//        val req = GetActionResultRequest.newBuilder()
+//            .setInstanceName(config.instance)
+//            .setActionDigest(actionDigest)
+//            .build()
+//        val res = actionCache.getActionResult(req)
+//        res.stdoutDigest
 
-        val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
+//        val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
+
     }
 }

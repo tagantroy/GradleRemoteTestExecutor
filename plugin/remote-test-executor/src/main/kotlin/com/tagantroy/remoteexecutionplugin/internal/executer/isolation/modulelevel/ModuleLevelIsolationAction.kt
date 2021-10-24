@@ -3,6 +3,8 @@ package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.modulele
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import com.tagantroy.remoteexecutionplugin.FileManager
+import com.tagantroy.remoteexecutionplugin.config.Config
+import com.tagantroy.remoteexecutionplugin.config.PlatformConfig
 import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
@@ -11,6 +13,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
 import java.io.File
+import java.util.*
 
 class ModuleLevelIsolationAction(
     private val remoteExecutionService: RemoteExecutionService,
@@ -57,7 +60,11 @@ class ModuleLevelIsolationAction(
         )
         logger.info("Execute remote action")
         val tree = fileManager.buildFakeFileTree()
-        remoteExecutionService.execute(arguments, mapOf(), fileManager.upload())
+        val treeMap = TreeMap<String, String>()
+        treeMap["OSFamily"]="Linux"
+        treeMap["container-image"]="docker://hub.docker.com/openjdk/8u312-slim@sha256:299d070740d9d1c12c80502dd8a8a05c67e85290da1674e7192ba1a873bd2f89"
+        val config = Config(true, "remote-execution", 600, PlatformConfig(treeMap))
+        remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
     }
 }
 
