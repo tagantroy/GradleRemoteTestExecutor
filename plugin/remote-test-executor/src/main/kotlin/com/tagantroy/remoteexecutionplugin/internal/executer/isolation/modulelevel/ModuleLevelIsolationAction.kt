@@ -7,10 +7,10 @@ import com.tagantroy.remoteexecutionplugin.config.Config
 import com.tagantroy.remoteexecutionplugin.config.PlatformConfig
 import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import org.gradle.api.internal.classpath.ModuleRegistry
-import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
-import org.gradle.api.internal.tasks.testing.TestResultProcessor
+import org.gradle.api.internal.tasks.testing.*
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
+import org.gradle.api.tasks.testing.TestOutputEvent
 import org.gradle.internal.time.Clock
 import java.io.File
 import java.util.*
@@ -64,6 +64,16 @@ class ModuleLevelIsolationAction(
         treeMap["container-image"]="docker://hub.docker.com/openjdk/8u312-slim@sha256:299d070740d9d1c12c80502dd8a8a05c67e85290da1674e7192ba1a873bd2f89"
         val config = Config(false, "remote-execution", 600, PlatformConfig(treeMap))
         remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
+
+        val id = "com.tagantroy.test.FastTest#test5()"
+        val descriptor = DefaultTestDescriptor(id, "com.tagantroy.test.FastTest", "test5")
+        testResultProcessor.started(descriptor, TestStartEvent(clock.currentTime))
+        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdOut, "std out example"))
+        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdErr, "std out example"))
+        testResultProcessor.completed(descriptor, TestCompleteEvent(clock.currentTime))
+        testResultProcessor
+//        testResultProcessor.failure(id, Throwable("asdf"))
+
     }
 }
 
