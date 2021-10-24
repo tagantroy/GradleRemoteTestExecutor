@@ -65,7 +65,7 @@ class RemoteExecutionService(
                     .build()
             })
             .setPlatform(Platform.newBuilder().addAllProperties(config.platform.toProperties()).build())
-            .addOutputPaths("test.txt")
+            .addOutputPaths("report")
             .build()
 
         val commandDigest = digestUtil.compute(command)
@@ -91,7 +91,6 @@ class RemoteExecutionService(
         val request = ExecuteRequest.newBuilder()
             .setInstanceName(config.instance)
             .setActionDigest(actionDigest)
-            .setSkipCacheLookup(true) //TODO: remove
             .build()
         logger.info("Execute action")
         val response = execution.execute(request)
@@ -99,14 +98,19 @@ class RemoteExecutionService(
         response.forEach {
             logger.info("execute: $it")
         }
-//        val req = GetActionResultRequest.newBuilder()
-//            .setInstanceName(config.instance)
-//            .setActionDigest(actionDigest)
-//            .build()
-//        val res = actionCache.getActionResult(req)
-//        res.stdoutDigest
+        val req = GetActionResultRequest.newBuilder()
+            .setInstanceName(config.instance)
+            .setActionDigest(actionDigest)
+            .build()
+        val res = actionCache.getActionResult(req)
 
-//        val r = cas.batchReadBlobs(BatchReadBlobsRequest.newBuilder().addDigests(res.stdoutDigest).build())
+        res.stdoutDigest
+        val r = cas.batchReadBlobs(
+            BatchReadBlobsRequest.newBuilder().addDigests(res.outputDirectoriesList.first().treeDigest).build()
+        )
+        r.responsesList.first()
+
+        print("asdf")
 
     }
 }

@@ -167,25 +167,23 @@ class FileManager(
             logger.info("Upload file: ${node.currentVirtualPath} with res: $res")
             return res.getResponses(0).digest
         } else {
-
             node.nodes.forEach { (_, u) -> reqUpload(u) }
-            node.sizeBytes = node.nodes.values.sumOf { it.sizeBytes!! }
             val grouped = node.nodes.values.groupBy { it.file }
-            val files = grouped[true]
-            val dirs = grouped[false]
+            val files = grouped[true]?.map { Pair(it, reqUpload(it)) }
+            val dirs = grouped[false]?.map {  Pair(it, reqUpload(it)) }
             val dirBuilder = Directory.newBuilder()
             files?.map {
-                FileNode.newBuilder().setIsExecutable(true).setName(node.name).setDigest(SHA256.compute(node.hash!!))
+                FileNode.newBuilder().setIsExecutable(true).setName(it.first.name).setDigest(it.second)
                     .build()
             }?.let { dirBuilder.addAllFiles(it) }
             dirs?.map {
-                DirectoryNode.newBuilder().setName(node.name).setDigest(SHA256.compute(node.hash!!)).build()
+                DirectoryNode.newBuilder().setName(it.first.name).setDigest(it.second).build()
             }?.let {
                 dirBuilder.addAllDirectories(it)
             }
             val dir = dirBuilder.build()
             val request = BatchUpdateBlobsRequest.Request.newBuilder()
-                .setDigest(SHA256.compute(dir, node.sizeBytes!!))
+                .setDigest(SHA256.compute(dir))
                 .setData(dir.toByteString())
                 .build()
             val updateRequest =

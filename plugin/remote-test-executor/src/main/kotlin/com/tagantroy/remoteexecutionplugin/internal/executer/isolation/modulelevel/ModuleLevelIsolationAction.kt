@@ -44,14 +44,14 @@ class ModuleLevelIsolationAction(
 //        logger.debug("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
 
         // TODO add support for filters
-        val fileManager = FileManager(rootProjectDir, buildDir, gradleUserHomeDir, classpath, remoteExecutionService)
+        val fileManager = FileManager(rootProjectDir, buildDir, gradleUserHomeDir, classpath + setOf(File("/home/ivanbalaksha/work/GradleRemoteTestExecutor/sample-project/junit-platform-console-standalone-1.8.1.jar")), remoteExecutionService)
         val fixedClasspath = fileManager.relativePathsFromVirtualRoot()
         val mergedClasspath = fixedClasspath.joinToString(":")
-        val junitPlatformConsole = File("$rootProjectDir/junit-platform-console-standalone-1.8.1.jar").toPath()
+        val junitPlatformConsole = File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
         val arguments = listOf(
             "java",
             "-jar",
-            "junit-platform-console-standalone-1.8.1.jar",
+            junitPlatformConsole,
             "-cp",
             mergedClasspath,
             "--scan-classpath",
@@ -59,11 +59,10 @@ class ModuleLevelIsolationAction(
             "./report"
         )
         logger.info("Execute remote action")
-        val tree = fileManager.buildFakeFileTree()
         val treeMap = TreeMap<String, String>()
         treeMap["OSFamily"]="Linux"
         treeMap["container-image"]="docker://hub.docker.com/openjdk/8u312-slim@sha256:299d070740d9d1c12c80502dd8a8a05c67e85290da1674e7192ba1a873bd2f89"
-        val config = Config(true, "remote-execution", 600, PlatformConfig(treeMap))
+        val config = Config(false, "remote-execution", 600, PlatformConfig(treeMap))
         remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
     }
 }
