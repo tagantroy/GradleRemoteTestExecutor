@@ -8,8 +8,13 @@ import com.tagantroy.remoteexecutionplugin.service.SHA256
 import org.gradle.api.logging.Logging
 import java.io.File
 import java.nio.file.Path
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.ForkJoinTask
+import java.util.concurrent.RecursiveAction
+import java.util.concurrent.RecursiveTask
 import kotlin.io.path.fileSize
 import kotlin.io.path.readBytes
+import kotlin.streams.toList
 
 data class REPath(val relativePath: Path, val absolutePath: Path)
 
@@ -95,9 +100,16 @@ fun relativePath(file: File, rootProjectDir: File, gradleUserHomeDir: File): Pat
     }
 }
 
+fun createTask(node: Node, service: RemoteExecutionService): RecursiveTask<Pair<Node, Digest>>{
+    return if (node.file) {
+        FileManager.UploadFileTask(node, service)
+    } else {
+        FileManager.UploadDirectoryTask(node, service)
+    }
+}
+
 class FileManager(
     private val rootProjectDir: File,
-    private val buildDir: File,
     private val gradleUserHomeDir: File,
     private val input: Set<File>,
     private val service: RemoteExecutionService
@@ -134,18 +146,12 @@ class FileManager(
     fun upload(): Digest {
         val tree = buildFakeFileTree()
 
-        return uploadTree(tree.root)
+        return reqUpload(tree.root)
     }
 
-    private fun uploadTree(root: Node): Digest {
-        return reqUpload(root)
-//        root.nodes.forEach { t, u -> reqUpload(u) }
-    }
-
-
-    @OptIn(kotlin.io.path.ExperimentalPathApi::class)
-    private fun reqUpload(node: Node): Digest {
-        if (node.file) {
+    class UploadFileTask(private val node: Node, private val service: RemoteExecutionService) : RecursiveTask<Pair<Node, Digest>>() {
+        @OptIn(kotlin.io.path.ExperimentalPathApi::class)
+        override fun compute(): Pair<Node, Digest> {
             val dataDigest = SHA256.compute(node.hash!!, node.sizeBytes!!)
             val dataRequest = BatchUpdateBlobsRequest.Request.newBuilder()
                 .setDigest(dataDigest)
@@ -164,21 +170,28 @@ class FileManager(
                 .setInstanceName("remote-execution")
                 .build()
             val res = service.upload(updateRequest)
-            logger.info("Upload file: ${node.currentVirtualPath} with res: $res")
-            return res.getResponses(0).digest
-        } else {
-            node.nodes.forEach { (_, u) -> reqUpload(u) }
+            return node to res.getResponses(0).digest
+        }
+    }
+
+
+
+
+    class UploadDirectoryTask(private val node: Node, private val service: RemoteExecutionService) : RecursiveTask<Pair<Node, Digest>>() {
+        @OptIn(kotlin.io.path.ExperimentalPathApi::class)
+        override fun compute(): Pair<Node, Digest> {
             val grouped = node.nodes.values.groupBy { it.file }
-            val files = grouped[true]?.map { Pair(it, reqUpload(it)) }
-            val dirs = grouped[false]?.map {  Pair(it, reqUpload(it)) }
+            val files = ForkJoinTask.invokeAll(grouped[true]?.map { createTask(it, service) } ?: emptyList()).stream().map { it.join() }.toList()
+            val dirs = ForkJoinTask.invokeAll(grouped[false]?.map { createTask(it, service) } ?: emptyList()).stream().map { it.join() }.toList()
+
             val dirBuilder = Directory.newBuilder()
-            files?.map {
+            files.map {
                 FileNode.newBuilder().setIsExecutable(true).setName(it.first.name).setDigest(it.second)
                     .build()
-            }?.let { dirBuilder.addAllFiles(it) }
-            dirs?.map {
+            }.let { dirBuilder.addAllFiles(it) }
+            dirs.map {
                 DirectoryNode.newBuilder().setName(it.first.name).setDigest(it.second).build()
-            }?.let {
+            }.let {
                 dirBuilder.addAllDirectories(it)
             }
             val dir = dirBuilder.build()
@@ -189,8 +202,14 @@ class FileManager(
             val updateRequest =
                 BatchUpdateBlobsRequest.newBuilder().addRequests(request).setInstanceName("remote-execution").build()
             val res = service.upload(updateRequest)
-            logger.info("Upload dir: $dir with res: $res")
-            return res.getResponses(0).digest
+            return node to res.getResponses(0).digest
         }
+
+
+    }
+
+    private fun reqUpload(node: Node): Digest {
+        val forkJoinPool = ForkJoinPool.commonPool()
+        return forkJoinPool.invoke(createTask(node, service)).second
     }
 }

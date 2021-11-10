@@ -44,7 +44,7 @@ class ModuleLevelIsolationAction(
 //        logger.debug("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
 
         // TODO add support for filters
-        val fileManager = FileManager(rootProjectDir, buildDir, gradleUserHomeDir, classpath + setOf(File("/home/ivanbalaksha/work/GradleRemoteTestExecutor/sample-project/junit-platform-console-standalone-1.8.1.jar")), remoteExecutionService)
+        val fileManager = FileManager(rootProjectDir, gradleUserHomeDir, classpath + setOf(File("/home/ivanbalaksha/work/GradleRemoteTestExecutor/sample-project/junit-platform-console-standalone-1.8.1.jar")), remoteExecutionService)
         val fixedClasspath = fileManager.relativePathsFromVirtualRoot()
         val mergedClasspath = fixedClasspath.joinToString(":")
         val junitPlatformConsole = File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
@@ -66,12 +66,12 @@ class ModuleLevelIsolationAction(
         remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
 
         val id = "com.tagantroy.test.FastTest#test5()"
-        val descriptor = DefaultTestDescriptor(id, "com.tagantroy.test.FastTest", "test5")
-        testResultProcessor.started(descriptor, TestStartEvent(clock.currentTime))
-        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdOut, "std out example"))
-        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdErr, "std out example"))
-        testResultProcessor.completed(descriptor, TestCompleteEvent(clock.currentTime))
-        testResultProcessor
+//        val descriptor = DefaultTestDescriptor(id, "com.tagantroy.test.FastTest", "test5")
+//        testResultProcessor.started(descriptor, TestStartEvent(clock.currentTime))
+//        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdOut, "std out example"))
+//        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdErr, "std out example"))
+//        testResultProcessor.completed(descriptor, TestCompleteEvent(clock.currentTime))
+//        testResultProcessor
 //        testResultProcessor.failure(id, Throwable("asdf"))
 
     }

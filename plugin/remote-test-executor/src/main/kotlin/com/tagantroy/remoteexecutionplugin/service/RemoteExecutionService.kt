@@ -109,8 +109,5 @@ class RemoteExecutionService(
             BatchReadBlobsRequest.newBuilder().addDigests(res.outputDirectoriesList.first().treeDigest).build()
         )
         r.responsesList.first()
-
-        print("asdf")
-
     }
 }
