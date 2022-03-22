@@ -32,8 +32,7 @@ class DigestUtil(private val hashFunction: HashFunction) {
     fun compute(hashCode: HashCode, sizeBytes: Long): Digest {
         return Digest.newBuilder().setHash(hashCode.toString()).setSizeBytes(sizeBytes).build()
     }
-
-    @OptIn(ExperimentalPathApi::class)
+    @OptIn(kotlin.io.path.ExperimentalPathApi::class)
     fun hash(path: Path): HashCode {
         return hashFunction.hashBytes(path.readBytes())
     }

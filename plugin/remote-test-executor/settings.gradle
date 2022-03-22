@@ -1,1 +1,3 @@
 rootProject.name = "remote-test-executor"
+
+include(":remote-execution-client")

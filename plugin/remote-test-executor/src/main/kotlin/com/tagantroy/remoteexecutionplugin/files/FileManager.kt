@@ -40,9 +40,9 @@ class Node(val name: String, val currentVirtualPath: String, val file: Boolean) 
     var sizeBytes: Long? = null
 }
 
-@OptIn(kotlin.io.path.ExperimentalPathApi::class)
 class FakeFileTree() {
     val root = Node("root", "root", false)
+    @OptIn(kotlin.io.path.ExperimentalPathApi::class)
     fun insert(rePath: REPath) {
         val fakePath = rePath.relativePath
         val arr = fakePath.toString().split("/")
@@ -94,7 +94,7 @@ fun relativePath(file: File, rootProjectDir: File, gradleUserHomeDir: File): Pat
             gradleUserHomeDir.toPath().relativize(file.toPath())
         }
         else -> {
-            logger.error("Cannot relativize")
+            logger.error("Cannot relativize: $file")
             file.toPath()
         }
     }
@@ -167,7 +167,6 @@ class FileManager(
             val updateRequest = BatchUpdateBlobsRequest.newBuilder()
                 .addRequests(dataRequest)
                 .addRequests(fileNodeRequest)
-                .setInstanceName("remote-execution")
                 .build()
             val res = service.upload(updateRequest)
             return node to res.getResponses(0).digest

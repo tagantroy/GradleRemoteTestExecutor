@@ -61,7 +61,7 @@ class ModuleLevelIsolationAction(
         logger.info("Execute remote action")
         val treeMap = TreeMap<String, String>()
         treeMap["OSFamily"]="Linux"
-        treeMap["container-image"]="docker://hub.docker.com/openjdk/8u312-slim@sha256:299d070740d9d1c12c80502dd8a8a05c67e85290da1674e7192ba1a873bd2f89"
+        treeMap["platform"]="java8"
         val config = Config(false, "remote-execution", 600, PlatformConfig(treeMap))
         remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
 

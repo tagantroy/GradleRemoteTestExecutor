@@ -49,7 +49,7 @@ class RETestClassProcessor(
             } else if (it.absolutePath.startsWith(gradleUserHomeDir.path)) {
                 gradleUserHomeDir.toPath().relativize(it.toPath())
             } else {
-                logger.error("Cannot relativize")
+                logger.error("Cannot relativize: $it")
                 it.toPath()
             }
         }
