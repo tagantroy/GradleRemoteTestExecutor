@@ -54,7 +54,7 @@ gradlePlugin {
 //}
 
 dependencies {
-    implementation project(":remote-execution-client")
+    implementation project(":remote-execution-grpc-client")
     implementation(gradleApi())
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 

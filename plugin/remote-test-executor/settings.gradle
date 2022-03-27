@@ -1,4 +1,4 @@
 rootProject.name = "remote-test-executor"
 
-include(":remote-execution-client")
+include(":remote-execution-grpc-client")
 include(":merkle-tree")

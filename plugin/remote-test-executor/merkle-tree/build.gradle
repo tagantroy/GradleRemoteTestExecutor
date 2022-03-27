@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation project(":remote-execution-client")
+    implementation project(":remote-execution-grpc-client")
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 
     implementation "javax.annotation:javax.annotation-api:1.3.2"
