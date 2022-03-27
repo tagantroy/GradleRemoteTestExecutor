@@ -1,0 +1,28 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group "com.tagantroy"
+description "MerkleTree Implementation"
+version "1.0.0"
+
+repositories {
+    maven { // The google mirror is less flaky than mavenCentral()
+        url "https://maven-central.storage-download.googleapis.com/maven2/" }
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(":remote-execution-client")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+
+    implementation "javax.annotation:javax.annotation-api:1.3.2"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}
