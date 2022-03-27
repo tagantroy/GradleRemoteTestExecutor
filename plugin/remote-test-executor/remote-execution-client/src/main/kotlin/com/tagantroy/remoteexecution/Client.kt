@@ -3,7 +3,6 @@ package com.tagantroy.remoteexecution
 import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
 import build.bazel.remote.execution.v2.ExecutionGrpc
 import com.sun.org.slf4j.internal.LoggerFactory
-import com.tagantroy.merkletree.InputSpec
 import com.tagantroy.merkletree.MerkleTree
 import com.tagantroy.remoteexecution.cas.CAS
 import com.tagantroy.remoteexecution.config.Config
@@ -113,7 +112,7 @@ class Client(val remoteExecution: RemoteExecution, private val cas: CAS) {
         val cmdDigest = ""
         logger.error("$cmdId $executionId > Command digest: $cmdDigest")
         logger.error("$cmdId $executionId > Computing input Merkle tree...")
-        val tree = MerkleTree().computeMerkleTree("", "", "", InputSpec(""));
+        val tree = MerkleTree().computeMerkleTree("", "", "");
         val actionDigest = ""
         logger.error("$cmdId $executionId > Action digest: $actionDigest")
     }

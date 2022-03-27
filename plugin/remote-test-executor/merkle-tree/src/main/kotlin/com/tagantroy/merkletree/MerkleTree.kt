@@ -7,7 +7,6 @@ class MerkleTree {
         execRoot: String,
         workingDir: String,
         remoteWorkingDir: String,
-        inputSpec: InputSpec,
     ): PreparedTree {
         val stats = TreeStats(0,0,0,0)
         val fs = mutableMapOf<String, FileSysNode>()
@@ -52,10 +51,12 @@ class MerkleTree {
 //    }
 //    return root, inputs, stats, nil
 
+//        val opts = TreeSymlinkOpts(false, inputSpec.symlinkBehavior);
+//        val inputExclusions = emptyList<String>()
+//        loadFiles(execRoot, workingDir, remoteWorkingDir, inputs, fs, cache, opts )
         val root = Digest("", 0)
         val inputs = listOf<UploadInfoEntry>()
         return PreparedTree(root, inputs, stats)
-        TODO("Not implemented yet")
     }
     private fun loadFiles() {
 
@@ -78,6 +79,5 @@ class MerkleTree {
 
 }
 
-data class InputSpec(val a: String)
 data class PreparedTree(val root: Digest, val inputs: List<UploadInfoEntry>, val stats: TreeStats)
 

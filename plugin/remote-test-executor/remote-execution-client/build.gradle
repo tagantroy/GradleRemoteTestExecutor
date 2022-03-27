@@ -21,6 +21,7 @@ def protocVersion = protobufVersion
 dependencies {
     api project(":remote-execution-grpc-client")
     implementation project(":merkle-tree")
+    implementation project(":common-types")
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
