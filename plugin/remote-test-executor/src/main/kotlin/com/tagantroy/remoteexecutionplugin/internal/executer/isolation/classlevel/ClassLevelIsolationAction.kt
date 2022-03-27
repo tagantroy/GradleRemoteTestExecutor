@@ -1,7 +1,7 @@
 package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.classlevel
 
 import com.google.common.collect.ImmutableSet
-import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
+import com.tagantroy.remoteexecution.Client
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
 import org.gradle.api.internal.tasks.testing.TestResultProcessor
@@ -15,7 +15,7 @@ import java.io.File
 
 
 class ClassLevelIsolationAction(
-    private val remoteExecutionService: RemoteExecutionService,
+    private val remoteExecutionService: Client,
     private val testExecutionSpec: JvmTestExecutionSpec,
     private val testResultProcessor: TestResultProcessor,
     private val workerLeaseService: WorkerLeaseService,

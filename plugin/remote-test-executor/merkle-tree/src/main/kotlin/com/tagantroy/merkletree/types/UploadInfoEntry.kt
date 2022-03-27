@@ -1,7 +1,5 @@
 package com.tagantroy.merkletree.types
 
-import com.tagantroy.merkletree.Digest
-
 sealed class UploadInfoEntry(val digest: Digest) {
     class Content(digest: Digest, val content: ByteArray) : UploadInfoEntry(digest)
     class Path(digest: Digest, val path: String) : UploadInfoEntry(digest)

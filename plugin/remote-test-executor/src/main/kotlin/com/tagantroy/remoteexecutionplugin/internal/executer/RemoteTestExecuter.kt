@@ -2,7 +2,6 @@ package com.tagantroy.remoteexecutionplugin.internal.executer
 
 import com.tagantroy.remoteexecutionplugin.internal.executer.isolation.classlevel.ClassLevelIsolationAction
 import com.tagantroy.remoteexecutionplugin.internal.executer.isolation.modulelevel.ModuleLevelIsolationAction
-import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
 import org.gradle.api.internal.tasks.testing.TestExecuter
@@ -14,7 +13,7 @@ import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
 
 class RemoteTestExecuter(
-    private val remoteExecutionService: RemoteExecutionService,
+    private val remoteExecutionService:  com.tagantroy.remoteexecution.Client,
     private val moduleRegistry: ModuleRegistry,
     private val workerLeaseService: WorkerLeaseService,
     private val clock: Clock,

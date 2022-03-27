@@ -1,7 +1,6 @@
 package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.classlevel
 
-import com.google.common.collect.ImmutableList
-import com.tagantroy.remoteexecutionplugin.service.RemoteExecutionService
+import com.tagantroy.remoteexecution.Client
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
 import org.gradle.api.internal.tasks.testing.TestClassProcessor
 import org.gradle.api.internal.tasks.testing.TestClassRunInfo
@@ -10,7 +9,7 @@ import org.gradle.api.logging.Logging
 import java.io.File
 
 class RETestClassProcessor(
-    val service: RemoteExecutionService,
+    val service: Client,
     val testExecutionSpec: JvmTestExecutionSpec,
     val rootProjectDir: File,
     val buildDir: File,

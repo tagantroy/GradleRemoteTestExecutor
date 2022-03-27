@@ -19,7 +19,7 @@ def protobufVersion = '3.19.4'
 def protocVersion = protobufVersion
 
 dependencies {
-    implementation project(":remote-execution-grpc-client")
+    api project(":remote-execution-grpc-client")
     implementation project(":merkle-tree")
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 
@@ -33,7 +33,9 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation "org.testcontainers:testcontainers:1.16.3"
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
 }
 
 test {
