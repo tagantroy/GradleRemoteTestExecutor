@@ -9,11 +9,10 @@ import org.gradle.api.Task
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.TestExecuter
 import org.gradle.api.logging.Logging
-import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
+import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -21,6 +20,7 @@ import javax.inject.Inject
 
 class RemoteTestExecutionPlugin @Inject constructor(
     private val moduleRegistry: ModuleRegistry,
+    private val workerLeaseService: WorkerLeaseService,
     val clock: Clock,
 ) : Plugin<Project> {
     private val logger = Logging.getLogger(RemoteTestExecutionPlugin::class.java)
@@ -46,7 +46,7 @@ class RemoteTestExecutionPlugin @Inject constructor(
         task.doFirst(
             ConditionalTaskAction(
                 { extension.enabled.get() },
-                InitTaskAction(extension, moduleRegistry, clock, projectRootDir, buildDir, gradleUserHomeDir)
+                InitTaskAction(extension, moduleRegistry, workerLeaseService,  clock, projectRootDir, buildDir, gradleUserHomeDir)
             )
         )
     }
@@ -67,6 +67,7 @@ class ConditionalTaskAction(val predicate: (Task) -> Boolean, val action: Action
 fun createRemoteTestExecuter(
     extensions: RemoteTestExecutionExtensions,
     moduleRegistry: ModuleRegistry,
+    workerLeaseService: WorkerLeaseService,
     clock: Clock,
     testFilter: TestFilter,
     projectRoot: File,
@@ -75,12 +76,13 @@ fun createRemoteTestExecuter(
 ): RemoteTestExecuter {
     val host = extensions.host.get()
     val service = createRemoteExecutionService(host)
-    return RemoteTestExecuter(service, moduleRegistry, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
+    return RemoteTestExecuter(service, moduleRegistry, workerLeaseService, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
 }
 
 class InitTaskAction(
     private val extension: RemoteTestExecutionExtensions,
     private val moduleRegistry: ModuleRegistry,
+    private val workerLeaseService: WorkerLeaseService,
     private val clock: Clock,
     private val projectRoot: File,
     private val buildDir: File,
@@ -91,7 +93,7 @@ class InitTaskAction(
         val testTask = task as Test
         setTestExecuter(
             task,
-            createRemoteTestExecuter(extension, moduleRegistry, clock, testTask.filter, projectRoot, buildDir, gradleUserHomeDir)
+            createRemoteTestExecuter(extension, moduleRegistry, workerLeaseService, clock, testTask.filter, projectRoot, buildDir, gradleUserHomeDir)
         )
     }
 }

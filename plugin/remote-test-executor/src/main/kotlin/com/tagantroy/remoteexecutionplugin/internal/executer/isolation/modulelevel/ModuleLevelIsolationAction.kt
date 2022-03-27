@@ -1,6 +1,5 @@
 package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.modulelevel
 
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import com.tagantroy.remoteexecutionplugin.FileManager
 import com.tagantroy.remoteexecutionplugin.config.Config
@@ -10,8 +9,8 @@ import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.*
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
-import org.gradle.api.tasks.testing.TestOutputEvent
 import org.gradle.internal.time.Clock
+import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
 import java.util.*
 

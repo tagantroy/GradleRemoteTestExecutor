@@ -10,6 +10,7 @@ import org.gradle.api.internal.tasks.testing.processors.TestMainAction
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
+import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
 
 
@@ -17,6 +18,7 @@ class ClassLevelIsolationAction(
     private val remoteExecutionService: RemoteExecutionService,
     private val testExecutionSpec: JvmTestExecutionSpec,
     private val testResultProcessor: TestResultProcessor,
+    private val workerLeaseService: WorkerLeaseService,
     private val testFilter: TestFilter,
     private val moduleRegistry: ModuleRegistry,
     private val clock: Clock,
@@ -53,9 +55,10 @@ class ClassLevelIsolationAction(
             detector,
             processor,
             testResultProcessor,
+            workerLeaseService,
             clock,
             testExecutionSpec.path,
             "Gradle Test Run " + testExecutionSpec.identityPath
-        ).run()
+        )
     }
 }
