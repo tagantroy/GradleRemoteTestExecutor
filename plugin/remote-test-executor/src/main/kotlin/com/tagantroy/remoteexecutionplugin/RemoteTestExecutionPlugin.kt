@@ -1,5 +1,6 @@
 package com.tagantroy.remoteexecutionplugin
 
+import com.tagantroy.remoteexecution.config.Config
 import com.tagantroy.remoteexecutionplugin.internal.executer.RemoteTestExecuter
 import org.gradle.api.Action
 import org.gradle.api.Plugin
@@ -74,7 +75,8 @@ fun createRemoteTestExecuter(
     gradleUserHomeDir: File,
 ): RemoteTestExecuter {
     val host = extensions.host.get()
-    val service =  com.tagantroy.remoteexecution.Client()
+    val config = Config("", "")
+    val service =  com.tagantroy.remoteexecution.Client.fromConfig(config)
     return RemoteTestExecuter(service, moduleRegistry, workerLeaseService, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
 }
 

@@ -1,6 +1,16 @@
 package com.tagantroy.remoteexecution
 
-data class ExecuteRequest(
+import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
+import build.bazel.remote.execution.v2.ExecutionGrpc
+import com.sun.org.slf4j.internal.LoggerFactory
+import com.tagantroy.merkletree.InputSpec
+import com.tagantroy.merkletree.MerkleTree
+import com.tagantroy.remoteexecution.cas.CAS
+import com.tagantroy.remoteexecution.config.Config
+import com.tagantroy.remoteexecution.re.RemoteExecution
+import io.grpc.ManagedChannelBuilder
+
+data class Request(
     /**
      * An identifier for the command for debugging.
      */
@@ -26,15 +36,15 @@ data class ExecuteRequest(
     /**
      * Comma-separated command input paths, relative to exec root.
      */
-    val inputs: List<String>,
+    val inputs: List<String> = emptyList(),
     /**
      * Comma-separated command output file paths, relative to exec root.
      */
-    val outputFiles: List<String>,
+    val outputFiles: List<String> = emptyList(),
     /**
      * Comma-separated command output directory paths, relative to exec root.
      */
-    val outputDirs: List<String>,
+    val outputDirs: List<String> = emptyList(),
     /**
      * Timeout for the command. Value of 0 means no timeout.
      */
@@ -42,11 +52,11 @@ data class ExecuteRequest(
     /**
      * Comma-separated key value pairs in the form key=value. This is used to identify remote platform settings like the docker image to use to run the command.
      */
-    val platform: Map<String, String>,
+    val platform: Map<String, String> = emptyMap(),
     /**
      * Environment variables to pass through to remote execution, as comma-separated key value pairs in the form key=value.
      */
-    val environmentVariables: Map<String, String>,
+    val environmentVariables: Map<String, String> = emptyMap(),
     /**
      * Boolean indicating whether to accept remote cache hits.
      */
@@ -65,8 +75,46 @@ data class ExecuteRequest(
     val downloadOutErr: Boolean = true,
 )
 
-class Client {
-    fun execute(executeRequest: ExecuteRequest) {
 
+class Client(val remoteExecution: RemoteExecution, private val cas: CAS) {
+    private val logger = LoggerFactory.getLogger(Client::class.java)
+
+    companion object {
+        fun fromConfig(config: Config): Client {
+            val casChannel = ManagedChannelBuilder
+                .forTarget(config.casService)
+                .usePlaintext()
+                .build()
+            val casGRPC = ContentAddressableStorageGrpc.newStub(casChannel)
+            val cas = CAS(casGRPC)
+            val reChannel = ManagedChannelBuilder
+                .forTarget(config.service)
+                .usePlaintext()
+                .build()
+            val reGRPC = ExecutionGrpc.newStub(reChannel)
+            val re = RemoteExecution(reGRPC)
+            return Client(re, cas)
+        }
+    }
+
+    fun execute(command: String, request: Request) {
+        val inputs = computeInputs()
+        val merkleTree = MerkleTree()
+        remoteExecution.execute()
+    }
+
+    private fun computeInputs() {
+        logger.error("Prepare command");
+        val cmdId = ""
+        val executionId = ""
+        val command = ""
+        logger.error("$cmdId $executionId > Command: \n $command")
+        val grpcCommand = ""
+        val cmdDigest = ""
+        logger.error("$cmdId $executionId > Command digest: $cmdDigest")
+        logger.error("$cmdId $executionId > Computing input Merkle tree...")
+        val tree = MerkleTree().computeMerkleTree("", "", "", InputSpec(""));
+        val actionDigest = ""
+        logger.error("$cmdId $executionId > Action digest: $actionDigest")
     }
 }

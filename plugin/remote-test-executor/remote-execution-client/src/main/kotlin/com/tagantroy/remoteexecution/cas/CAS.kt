@@ -1,6 +1,8 @@
 package com.tagantroy.remoteexecution.cas
 
-class Cas {
+import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
+
+class CAS(cas: ContentAddressableStorageGrpc.ContentAddressableStorageStub) {
     fun uploadIfMissing() {
         TODO("Not implemented yet")
     }
