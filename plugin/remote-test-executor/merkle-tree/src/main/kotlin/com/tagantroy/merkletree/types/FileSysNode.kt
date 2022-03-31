@@ -1,7 +1,7 @@
 package com.tagantroy.merkletree.types
 
-data class FileSysNode(
-    val file: FileNode,
-    val emptyDirectoryMarker: Boolean,
-    val symlink: SymlinkNode
-)
+sealed class FileSysNode {
+    class EmptyDirectory : FileSysNode()
+    data class File(val fileNode: FileNode): FileSysNode()
+    data class Symlink(val symlink: SymlinkNode): FileSysNode()
+}

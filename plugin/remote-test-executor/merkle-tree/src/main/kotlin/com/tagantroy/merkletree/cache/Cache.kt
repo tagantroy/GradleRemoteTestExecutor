@@ -1,7 +1,6 @@
 package com.tagantroy.merkletree.cache
 
 import com.tagantroy.merkletree.hash.toDigest
-import com.tagantroy.merkletree.types.Digest
 import com.tagantroy.merkletree.types.metadata.Metadata
 import com.tagantroy.merkletree.types.metadata.SymlinkMetadata
 import java.nio.file.Files
@@ -48,13 +47,22 @@ class SimpleCache : Cache {
 
     private fun computeMetadata(path: Path): Metadata {
         val digest = path.toDigest();
+        val isRegularFile = Files.isRegularFile(path)
         val isExecutable = Files.isExecutable(path)
         val isDirectory = Files.isDirectory(path)
-        val symlinkMetadata = if (Files.isSymbolicLink(path)) {
+        val isSymlink = Files.isSymbolicLink(path)
+        val symlinkMetadata = if (isSymlink) {
             val target = Files.readSymbolicLink(path)
             SymlinkMetadata(target.toString(), false)
         } else null
-        return Metadata(digest, isExecutable, isDirectory, symlinkMetadata)
+        return Metadata(
+            digest,
+            isExecutable,
+            isDirectory,
+            isRegularFile,
+            isSymlink,
+            symlinkMetadata
+        )
     }
 }
 

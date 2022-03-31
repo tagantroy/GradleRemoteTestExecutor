@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.collections.ArrayDeque
+import com.tagantroy.merkletree.types.metadata.Metadata
 
 class MerkleTree(
     val inputSpec: InputSpec,
@@ -99,29 +100,30 @@ class MerkleTree(
             val meta = cache.get(current)
 
             when {
-                Files.isRegularFile(current) -> {
-                    handleFile(current)
-                }
-                Files.isDirectory(current) -> {
+                meta.isDirectory -> {
+                    fs[current.toString()] = FileSysNode.EmptyDirectory()
                     Files.list(current).forEach {
                         q.add(it)
                     }
                 }
-                Files.isSymbolicLink(current) -> {
+                meta.symlink != null -> {
 
+                }
+                meta.isRegularFile -> {
+                    handleFile(current, meta)
                 }
             }
         }
     }
 
-    private fun handleFile(current: Path): FileSysNode {
+    private fun handleFile(current: Path, meta: Metadata): FileSysNode {
         val fileNode = FileNode(
             ue = UploadInfoEntry.Path(
-                Digest("", 0), current.toString() // TODO: Fix it
+                meta.digest, current.toString() // TODO: Use proper path here
             ),
             isExecutable = Files.isExecutable(current)
         )
-        return FileSysNode(fileNode, false, SymlinkNode(""))
+        return FileSysNode.File(fileNode)
     }
 
     private fun buildTree() {
