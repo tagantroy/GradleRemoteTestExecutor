@@ -34,7 +34,7 @@ class Client(val remoteExecution: RemoteExecution, private val cas: CAS) {
 
     fun execute(command: Command, executionOptions: ExecutionOptions) {
         val inputs = computeInputs()
-        val merkleTree = MerkleTree()
+//        val merkleTree = MerkleTree()
         remoteExecution.execute()
     }
 
@@ -48,7 +48,7 @@ class Client(val remoteExecution: RemoteExecution, private val cas: CAS) {
         val cmdDigest = ""
         logger.error("$cmdId $executionId > Command digest: $cmdDigest")
         logger.error("$cmdId $executionId > Computing input Merkle tree...")
-        val tree = MerkleTree().computeMerkleTree("", "", "");
+//        val tree = MerkleTree().computeMerkleTree("", "", "");
         val actionDigest = ""
         logger.error("$cmdId $executionId > Action digest: $actionDigest")
     }
