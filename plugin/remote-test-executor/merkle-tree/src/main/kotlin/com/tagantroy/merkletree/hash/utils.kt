@@ -12,3 +12,10 @@ fun Path.toDigest(): Digest {
     val size = java.nio.file.Files.size(this)
     return Digest(hash.toString(), size)
 }
+
+fun ByteArray.toDigest(): Digest {
+    val hasher = hashFunction.newHasher()
+    hasher.putBytes(this)
+    val hash = hasher.hash()
+    return Digest(hash.toString(), this.size.toLong())
+}

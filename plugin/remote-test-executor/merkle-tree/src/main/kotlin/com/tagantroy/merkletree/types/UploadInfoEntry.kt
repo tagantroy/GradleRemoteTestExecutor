@@ -1,5 +1,18 @@
 package com.tagantroy.merkletree.types
 
+import com.tagantroy.merkletree.hash.toDigest
+import java.nio.file.Path
+
+fun fromBlob(byteArray: ByteArray): UploadInfoEntry {
+    val digest = byteArray.toDigest()
+    return UploadInfoEntry.Content(digest, byteArray)
+}
+
+fun fromPath(path: Path): UploadInfoEntry {
+    val digest = path.toDigest()
+    return UploadInfoEntry.Path(digest, path.toString())
+}
+
 sealed class UploadInfoEntry(val digest: Digest) {
     class Content(digest: Digest, val content: ByteArray) : UploadInfoEntry(digest)
     class Path(digest: Digest, val path: String) : UploadInfoEntry(digest)
