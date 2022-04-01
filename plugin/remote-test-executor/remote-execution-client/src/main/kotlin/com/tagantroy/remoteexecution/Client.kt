@@ -8,6 +8,8 @@ import build.bazel.remote.execution.v2.Platform
 import com.sun.org.slf4j.internal.LoggerFactory
 import com.tagantroy.merkletree.MerkleTree
 import com.tagantroy.merkletree.cache.SimpleCache
+import com.tagantroy.merkletree.types.Digest
+import com.tagantroy.merkletree.types.UploadInfoEntry
 import com.tagantroy.merkletree.types.fromProto
 import com.tagantroy.merkletree.types.toProto
 import com.tagantroy.remoteexecution.cas.CAS
@@ -42,20 +44,25 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
         val cmdId = command.identifiers.commandId
         val executionId = command.identifiers.executionId
         logger.error("$cmdId $executionId > Compute inputs")
-        val inputBlobs = computeInputs(command)
+        val (actionDigest, inputs) = computeInputs(command)
         logger.error("$cmdId $executionId > Upload if missing")
-        cas.uploadIfMissing(null!!, null!!)
-        remoteExecution.execute()
+        cas.uploadIfMissing(inputs)
+        remoteExecution.execute(actionDigest.toProto())
     }
 
-    private fun computeInputs(cmd: Command) {
+    data class ComputeInputsResponse(
+        val actionDigest: Digest,
+        val uploadInfoEntry: Map<Digest, UploadInfoEntry>
+    )
+
+    private fun computeInputs(cmd: Command): ComputeInputsResponse {
         logger.error("Prepare command");
         val cmdId = cmd.identifiers.commandId
         val executionId = cmd.identifiers.executionId
         val commandPb = cmd.toPb()
         logger.error("$cmdId $executionId > Command: \n $commandPb")
-        val cmdUe = fromProto(commandPb)
-        val cmdDigest = cmdUe.digest
+        val cmdPbUe = fromProto(commandPb)
+        val cmdDigest = cmdPbUe.digest
         logger.error("$cmdId $executionId > Command digest: $cmdDigest")
         logger.error("$cmdId $executionId > Computing input Merkle tree...")
         val simpleCache = SimpleCache()
@@ -73,6 +80,8 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
         val actionPbUe = fromProto(actionPb)
         val actionDigest = actionPbUe.digest
         logger.error("$cmdId $executionId > Action digest: $actionDigest")
+        val combinedBlobs = inputs + mapOf(cmdPbUe.digest to cmdPbUe, actionPbUe.digest to actionPbUe)
+        return ComputeInputsResponse(actionDigest, combinedBlobs)
     }
 }
 

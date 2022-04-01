@@ -57,8 +57,7 @@ class MerkleTree(
         )
         val ft = buildTree(fs)
         val (root, blobs) = packageTree(ft, stats)
-        val inputs = blobs.values.toList()
-        return PreparedTree(root, inputs, stats)
+        return PreparedTree(root, blobs, stats)
     }
 
     private fun loadFiles(
@@ -191,5 +190,5 @@ class MerkleTree(
 
 }
 
-data class PreparedTree(val root: Digest, val inputs: List<UploadInfoEntry>, val stats: TreeStats)
+data class PreparedTree(val root: Digest, val inputs: Map<Digest, UploadInfoEntry>, val stats: TreeStats)
 
