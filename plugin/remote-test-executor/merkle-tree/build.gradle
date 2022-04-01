@@ -11,6 +11,7 @@ repositories {
         url "https://maven-central.storage-download.googleapis.com/maven2/" }
     mavenCentral()
 }
+def grpcVersion = '1.45.0'
 
 dependencies {
     implementation project(":remote-execution-grpc-client")
@@ -24,6 +25,8 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 
     implementation "com.google.guava:guava:31.0-jre"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
 }
 
 test {
