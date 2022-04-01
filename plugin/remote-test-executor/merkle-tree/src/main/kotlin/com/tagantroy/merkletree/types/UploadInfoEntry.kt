@@ -1,6 +1,7 @@
 package com.tagantroy.merkletree.types
 
 import build.bazel.remote.execution.v2.Directory
+import com.google.protobuf.Message
 import com.tagantroy.merkletree.hash.toDigest
 import java.nio.file.Path
 
@@ -14,7 +15,7 @@ fun fromPath(path: Path): UploadInfoEntry {
     return UploadInfoEntry.Path(digest, path.toString())
 }
 
-fun fromProto(dir: Directory) : UploadInfoEntry {
+fun fromProto(dir: Message) : UploadInfoEntry {
     return fromBlob(dir.toByteArray())
 }
 

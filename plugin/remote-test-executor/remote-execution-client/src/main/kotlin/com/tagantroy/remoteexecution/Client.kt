@@ -1,5 +1,6 @@
 package com.tagantroy.remoteexecution
 
+import build.bazel.remote.execution.v2.Action
 import build.bazel.remote.execution.v2.Command.EnvironmentVariable
 import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
 import build.bazel.remote.execution.v2.ExecutionGrpc
@@ -7,13 +8,13 @@ import build.bazel.remote.execution.v2.Platform
 import com.sun.org.slf4j.internal.LoggerFactory
 import com.tagantroy.merkletree.MerkleTree
 import com.tagantroy.merkletree.cache.SimpleCache
-import com.tagantroy.merkletree.types.Digest
+import com.tagantroy.merkletree.types.fromProto
+import com.tagantroy.merkletree.types.toProto
 import com.tagantroy.remoteexecution.cas.CAS
 import com.tagantroy.remoteexecution.config.Config
 import com.tagantroy.remoteexecution.re.RemoteExecution
 import com.tagantroy.types.Command
 import com.tagantroy.types.ExecutionOptions
-import com.tagantroy.types.InputSpec
 import io.grpc.ManagedChannelBuilder
 
 class Client(private val remoteExecution: RemoteExecution, private val cas: CAS) {
@@ -25,22 +26,26 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
                 .forTarget(config.casService)
                 .usePlaintext()
                 .build()
-            val casGRPC = ContentAddressableStorageGrpc.newStub(casChannel)
+            val casGRPC = ContentAddressableStorageGrpc.newBlockingStub(casChannel)
             val cas = CAS(casGRPC)
             val reChannel = ManagedChannelBuilder
                 .forTarget(config.service)
                 .usePlaintext()
                 .build()
-            val reGRPC = ExecutionGrpc.newStub(reChannel)
+            val reGRPC = ExecutionGrpc.newBlockingStub(reChannel)
             val re = RemoteExecution(reGRPC)
             return Client(re, cas)
         }
     }
 
     fun execute(command: Command, executionOptions: ExecutionOptions) {
-        val inputs = computeInputs(command)
-
-//        remoteExecution.execute()
+        val cmdId = command.identifiers.commandId
+        val executionId = command.identifiers.executionId
+        logger.error("$cmdId $executionId > Compute inputs")
+        val inputBlobs = computeInputs(command)
+        logger.error("$cmdId $executionId > Upload if missing")
+        cas.uploadIfMissing(null!!, null!!)
+        remoteExecution.execute()
     }
 
     private fun computeInputs(cmd: Command) {
@@ -49,8 +54,8 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
         val executionId = cmd.identifiers.executionId
         val commandPb = cmd.toPb()
         logger.error("$cmdId $executionId > Command: \n $commandPb")
-        val grpcCommand = ""
-        val cmdDigest = ""
+        val cmdUe = fromProto(commandPb)
+        val cmdDigest = cmdUe.digest
         logger.error("$cmdId $executionId > Command digest: $cmdDigest")
         logger.error("$cmdId $executionId > Computing input Merkle tree...")
         val simpleCache = SimpleCache()
@@ -60,7 +65,13 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
             cmd.workingDir,
             cmd.remoteWorkingDir
         )
-        val actionDigest = ""
+        val actionPb = Action.newBuilder()
+            .setCommandDigest(cmdDigest.toProto())
+            .setInputRootDigest(root.toProto())
+            .setDoNotCache(true) //TODO: Fix it later
+            .build()
+        val actionPbUe = fromProto(actionPb)
+        val actionDigest = actionPbUe.digest
         logger.error("$cmdId $executionId > Action digest: $actionDigest")
     }
 }

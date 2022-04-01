@@ -3,6 +3,7 @@ package com.tagantroy.remoteexecution
 import com.tagantroy.types.*
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import java.util.UUID
 
 class ClientTest {
     @Test
@@ -11,12 +12,12 @@ class ClientTest {
         val client = Client.fromConfig(config)
         val command = Command(
             identifiers = Identifiers(
-                commandId = "",
-                invocationId = "",
+                commandId = "E2E test",
+                invocationId = UUID.randomUUID().toString(),
                 correlatedInvocationId = "",
                 toolName = "",
                 toolVersion = "",
-                executionId = ""
+                executionId = UUID.randomUUID().toString(),
             ),
             args = listOf("/bin/bash", "merkle-tree/src/test/resources/testproj/twofiles/script.sh"),
             execRoot = "/Users/ivanbalaksha/work/GradleRemoteTestExecutor/plugin/remote-test-executor",
