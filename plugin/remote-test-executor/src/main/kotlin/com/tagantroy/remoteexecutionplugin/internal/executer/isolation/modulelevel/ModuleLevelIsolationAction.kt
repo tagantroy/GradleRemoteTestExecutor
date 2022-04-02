@@ -2,7 +2,6 @@ package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.modulele
 
 import com.google.common.collect.ImmutableSet
 import com.tagantroy.remoteexecution.Client
-import com.tagantroy.remoteexecution.config.Config
 import com.tagantroy.types.*
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
@@ -27,6 +26,7 @@ class ModuleLevelIsolationAction(
 ) : Runnable {
 
     private val logger = Logging.getLogger(ModuleLevelIsolationAction::class.java)
+
     override fun run() {
         val testFramework = testExecutionSpec.testFramework
 
@@ -54,24 +54,27 @@ class ModuleLevelIsolationAction(
             )
         }
 
-        println("gradleUserHomeArtifacts: ${gradleUserHomeArtifacts}")
-        println("Input: ${input}")
         val preparedClassPath = input + gradleUserHomeArtifacts.map { it.path }
-        println("preparedClassPath: ${preparedClassPath}")
 
-
-
-        val junitPlatformConsole =
-            File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
         val arguments = listOf(
             "java",
             "-jar",
-            junitPlatformConsole,
+            "junit-platform-console-standalone-1.8.1.jar",
             "-cp",
             preparedClassPath.joinToString(":"),
-            "--scan-classpath",
+            "--scan-class-path",
+            input.joinToString(":"),
             "--reports-dir",
             "./report"
+        )
+
+        val junitPlatformConsole =
+            File("sample-project/junit-platform-console-standalone-1.8.1.jar")
+        val junitPlatformConsoleJar = VirtualInput(
+            "junit-platform-console-standalone-1.8.1.jar",
+            junitPlatformConsole.readBytes(),
+            isExecutable = false,
+            isEmptyDirectory = false
         )
 
         val command = Command(
@@ -88,22 +91,19 @@ class ModuleLevelIsolationAction(
             workingDir = ".",
             remoteWorkingDir = ".",
             inputSpec = InputSpec(
-                inputs = input + listOf(
-                    File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
-                ),
-                virtualInputs = gradleUserHomeArtifacts,
+                inputs = input,
+                virtualInputs = gradleUserHomeArtifacts + junitPlatformConsoleJar,
                 inputExclusions = emptyList(),
                 environmentVariable = mapOf(),
                 symlinkBehavior = SymlinkBehaviorType.ResolveSymlink
             ),
             outputFiles = emptyList(),
-            outputDirs = emptyList(),
+            outputDirs = listOf("./report"),
             timeout = Duration.ofSeconds(100),
             platform = mapOf("OSFamily" to "Linux", "platform" to "java8")
         )
         val executionOptions =
             ExecutionOptions(acceptCached = false, doNotCache = true, downloadOutputs = false, downloadOutErr = false)
-
 
         remoteExecutionClient.execute(command, executionOptions)
     }
