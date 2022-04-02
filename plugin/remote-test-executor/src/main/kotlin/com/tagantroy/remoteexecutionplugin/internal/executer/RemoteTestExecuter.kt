@@ -31,7 +31,7 @@ class RemoteTestExecuter(
             ClassLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, workerLeaseService, testFilter, moduleRegistry, clock, rootProjectDir, buildDir, gradleUserHomeDir).run()
         } else {
             logger.info("Execute with module level isolation")
-            ModuleLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock, rootProjectDir, buildDir, gradleUserHomeDir).run()
+            ModuleLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock, rootProjectDir, gradleUserHomeDir).run()
         }
     }
 

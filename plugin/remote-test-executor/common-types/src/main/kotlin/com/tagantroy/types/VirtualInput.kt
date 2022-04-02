@@ -5,4 +5,8 @@ class VirtualInput(
     val contents: ByteArray,
     val isExecutable: Boolean,
     val isEmptyDirectory: Boolean,
-)
+) {
+    override fun toString(): String {
+        return "VirtualInput(path='$path', isExecutable=$isExecutable, isEmptyDirectory=$isEmptyDirectory)"
+    }
+}

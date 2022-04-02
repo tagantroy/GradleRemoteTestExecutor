@@ -21,7 +21,6 @@ class ModuleLevelIsolationAction(
     private val moduleRegistry: ModuleRegistry,
     private val clock: Clock,
     private val rootProjectDir: File,
-    private val buildDir: File,
     private val gradleUserHomeDir: File,
 ) : Runnable {
 
@@ -35,43 +34,40 @@ class ModuleLevelIsolationAction(
         val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
         val additionalClassPath = moduleRegistry.additionalClassPath.asFiles.filter { it.exists() }
 
-        println("classpath = $classpath")
-        println("modulePath = $modulePath")
-        println("gradleUserHomeDir = $gradleUserHomeDir")
-        println("path = ${testExecutionSpec.path}")
-        println("identityPath = ${testExecutionSpec.identityPath}")
-        println("testWorkerImplementationModules = $testWorkerImplementationModules")
-        println("additionalClassPath = $additionalClassPath")
-        println("excludePatterns = ${testFilter.excludePatterns}")
-        println("includePatterns = ${testFilter.includePatterns}")
-        println("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
+//        println("testWorkerImplementationModules = $testWorkerImplementationModules")
 
-        val input = classpath.filter { it.startsWith(rootProjectDir) }.map { it.relativeTo(rootProjectDir) }
+        val localBuildArtifacts = classpath.filter { it.startsWith(rootProjectDir) }
+            .map { it.relativeTo(rootProjectDir) }
             .map { it.toPath().toString() }
+
+        println("LocalBuildArtifacts: $localBuildArtifacts")
+
         val gradleUserHomeArtifacts = classpath.filterNot { it.startsWith(rootProjectDir) }.map {
             VirtualInput(
                 it.relativeTo(gradleUserHomeDir).toString(), it.readBytes(), false, false
             )
         }
 
-        val preparedClassPath = input + gradleUserHomeArtifacts.map { it.path }
+        println("GradleUserHomeArtifacts: $gradleUserHomeArtifacts")
+
+        val preparedClassPath = localBuildArtifacts + gradleUserHomeArtifacts.map { it.path }
 
         val arguments = listOf(
             "java",
             "-jar",
-            "junit-platform-console-standalone-1.8.1.jar",
+            "junit-platform-console-standalone-1.8.2.jar",
             "-cp",
             preparedClassPath.joinToString(":"),
             "--scan-class-path",
-            input.joinToString(":"),
+            localBuildArtifacts.joinToString(":"),
             "--reports-dir",
             "./report"
         )
 
         val junitPlatformConsole =
-            File("sample-project/junit-platform-console-standalone-1.8.1.jar")
+            File("sample-project/junit-platform-console-standalone-1.8.2.jar")
         val junitPlatformConsoleJar = VirtualInput(
-            "junit-platform-console-standalone-1.8.1.jar",
+            "junit-platform-console-standalone-1.8.2.jar",
             junitPlatformConsole.readBytes(),
             isExecutable = false,
             isEmptyDirectory = false
@@ -91,7 +87,7 @@ class ModuleLevelIsolationAction(
             workingDir = ".",
             remoteWorkingDir = ".",
             inputSpec = InputSpec(
-                inputs = input,
+                inputs = localBuildArtifacts,
                 virtualInputs = gradleUserHomeArtifacts + junitPlatformConsoleJar,
                 inputExclusions = emptyList(),
                 environmentVariable = mapOf(),

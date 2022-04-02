@@ -112,7 +112,8 @@ class MerkleTree(
             val currentPath = Paths.get(name)
             val nameCount = currentPath.nameCount
             currentPath.getName(0)
-            val segments = (1..nameCount - 2).map {
+            val startIdx = if (currentPath.getName(0).toString() == ".") 1 else 0
+            val segments = (startIdx..nameCount - 2).map {
                 currentPath.getName(it)
             }
             val base = currentPath.getName(nameCount - 1).toString()
