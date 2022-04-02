@@ -16,6 +16,7 @@ import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
+import java.util.*
 import javax.inject.Inject
 
 class RemoteTestExecutionPlugin @Inject constructor(
@@ -28,17 +29,19 @@ class RemoteTestExecutionPlugin @Inject constructor(
         if (pluginAlreadyApplied(project)) {
             return
         }
+        val invocationId = UUID.randomUUID().toString()
 
-        val extension = project.extensions.create("remoteTestExecutor",RemoteTestExecutionExtensions::class.java)
+        val extension = project.extensions.create("remoteTestExecutor", RemoteTestExecutionExtensions::class.java)
         project.tasks.withType(Test::class.java).configureEach {
-            configureTestTask(it, extension, project)
+            configureTestTask(it, extension, project, invocationId)
         }
     }
 
     private fun configureTestTask(
         task: Test,
         extension: RemoteTestExecutionExtensions,
-    project: Project
+        project: Project,
+        invocationId: String
     ) {
         val projectRootDir = project.rootProject.rootDir
         val buildDir = project.buildDir
@@ -46,7 +49,16 @@ class RemoteTestExecutionPlugin @Inject constructor(
         task.doFirst(
             ConditionalTaskAction(
                 { extension.enabled.get() },
-                InitTaskAction(extension, moduleRegistry, workerLeaseService,  clock, projectRootDir, buildDir, gradleUserHomeDir)
+                InitTaskAction(
+                    extension,
+                    moduleRegistry,
+                    workerLeaseService,
+                    clock,
+                    projectRootDir,
+                    buildDir,
+                    gradleUserHomeDir,
+                    invocationId
+                )
             )
         )
     }
@@ -73,11 +85,22 @@ fun createRemoteTestExecuter(
     projectRoot: File,
     buildDir: File,
     gradleUserHomeDir: File,
+    invocationId: String,
 ): RemoteTestExecuter {
     val host = extensions.host.get()
     val config = Config("localhost:8980", "localhost:8980")
-    val service =  com.tagantroy.remoteexecution.Client.fromConfig(config)
-    return RemoteTestExecuter(service, moduleRegistry, workerLeaseService, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
+    val service = com.tagantroy.remoteexecution.Client.fromConfig(config)
+    return RemoteTestExecuter(
+        service,
+        moduleRegistry,
+        workerLeaseService,
+        clock,
+        testFilter,
+        projectRoot,
+        buildDir,
+        gradleUserHomeDir,
+        invocationId
+    )
 }
 
 class InitTaskAction(
@@ -88,13 +111,24 @@ class InitTaskAction(
     private val projectRoot: File,
     private val buildDir: File,
     private val gradleUserHomeDir: File,
+    private val invocationId: String,
 ) :
     Action<Task> {
     override fun execute(task: Task) {
         val testTask = task as Test
         setTestExecuter(
             task,
-            createRemoteTestExecuter(extension, moduleRegistry, workerLeaseService, clock, testTask.filter, projectRoot, buildDir, gradleUserHomeDir)
+            createRemoteTestExecuter(
+                extension,
+                moduleRegistry,
+                workerLeaseService,
+                clock,
+                testTask.filter,
+                projectRoot,
+                buildDir,
+                gradleUserHomeDir,
+                invocationId
+            )
         )
     }
 }

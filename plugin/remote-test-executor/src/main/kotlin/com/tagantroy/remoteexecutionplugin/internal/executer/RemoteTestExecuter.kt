@@ -11,6 +11,7 @@ import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
 import org.gradle.internal.work.WorkerLeaseService
 import java.io.File
+import java.util.*
 
 class RemoteTestExecuter(
     private val remoteExecutionService:  com.tagantroy.remoteexecution.Client,
@@ -21,6 +22,7 @@ class RemoteTestExecuter(
     private val rootProjectDir: File,
     private val buildDir: File,
     private val gradleUserHomeDir: File,
+    private val invocationId: String,
 ) : TestExecuter<JvmTestExecutionSpec> {
 
     private val logger = Logging.getLogger(RemoteTestExecuter::class.java)
@@ -31,7 +33,7 @@ class RemoteTestExecuter(
             ClassLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, workerLeaseService, testFilter, moduleRegistry, clock, rootProjectDir, buildDir, gradleUserHomeDir).run()
         } else {
             logger.info("Execute with module level isolation")
-            ModuleLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock, rootProjectDir, gradleUserHomeDir).run()
+            ModuleLevelIsolationAction(remoteExecutionService, testExecutionSpec, testResultProcessor, testFilter, moduleRegistry, clock, rootProjectDir, gradleUserHomeDir, invocationId).run()
         }
     }
 

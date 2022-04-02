@@ -22,34 +22,27 @@ class ModuleLevelIsolationAction(
     private val clock: Clock,
     private val rootProjectDir: File,
     private val gradleUserHomeDir: File,
+    private val invocationId: String,
 ) : Runnable {
 
     private val logger = Logging.getLogger(ModuleLevelIsolationAction::class.java)
 
     override fun run() {
-        val testFramework = testExecutionSpec.testFramework
-
         val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath.filter { it.exists() })
-        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
-        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
         val additionalClassPath = moduleRegistry.additionalClassPath.asFiles.filter { it.exists() }
 
-//        println("testWorkerImplementationModules = $testWorkerImplementationModules")
-
-        val localBuildArtifacts = classpath.filter { it.startsWith(rootProjectDir) }
+        if (testFilter.excludePatterns.isNotEmpty() || testFilter.includePatterns.isNotEmpty()) {
+            logger.warn("TestFilters are not supported yet")
+        }
+        val localBuildArtifacts = (classpath + additionalClassPath).filter { it.startsWith(rootProjectDir) }
             .map { it.relativeTo(rootProjectDir) }
             .map { it.toPath().toString() }
-
-        println("LocalBuildArtifacts: $localBuildArtifacts")
-
-        val gradleUserHomeArtifacts = classpath.filterNot { it.startsWith(rootProjectDir) }.map {
-            VirtualInput(
-                it.relativeTo(gradleUserHomeDir).toString(), it.readBytes(), false, false
-            )
-        }
-
-        println("GradleUserHomeArtifacts: $gradleUserHomeArtifacts")
-
+        val gradleUserHomeArtifacts =
+            (classpath + additionalClassPath).filterNot { it.startsWith(rootProjectDir) }.map {
+                VirtualInput(
+                    it.relativeTo(gradleUserHomeDir).toString(), it.readBytes(), false, false
+                )
+            }
         val preparedClassPath = localBuildArtifacts + gradleUserHomeArtifacts.map { it.path }
 
         val arguments = listOf(
@@ -76,11 +69,11 @@ class ModuleLevelIsolationAction(
         val command = Command(
             identifiers = Identifiers(
                 commandId = "Test Run ${testExecutionSpec.identityPath}",
-                invocationId = UUID.randomUUID().toString(),
+                invocationId = invocationId,
                 correlatedInvocationId = "",
                 toolName = "Gradle Remote Execution Plugin",
                 toolVersion = "0.0.1",
-                executionId = "",
+                executionId = UUID.randomUUID().toString(),
             ),
             args = arguments,
             execRoot = rootProjectDir.path,
