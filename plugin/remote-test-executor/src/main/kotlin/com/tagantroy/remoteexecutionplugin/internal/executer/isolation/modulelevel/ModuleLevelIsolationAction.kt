@@ -2,6 +2,8 @@ package com.tagantroy.remoteexecutionplugin.internal.executer.isolation.modulele
 
 import com.google.common.collect.ImmutableSet
 import com.tagantroy.remoteexecution.Client
+import com.tagantroy.remoteexecution.config.Config
+import com.tagantroy.types.*
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
 import org.gradle.api.internal.tasks.testing.TestResultProcessor
@@ -9,9 +11,11 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
 import org.gradle.internal.time.Clock
 import java.io.File
+import java.time.Duration
+import java.util.*
 
 class ModuleLevelIsolationAction(
-    private val remoteExecutionService: Client,
+    private val remoteExecutionClient: Client,
     private val testExecutionSpec: JvmTestExecutionSpec,
     private val testResultProcessor: TestResultProcessor,
     private val testFilter: TestFilter,
@@ -26,23 +30,55 @@ class ModuleLevelIsolationAction(
         val testFramework = testExecutionSpec.testFramework
 
         val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath)
-//        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
-//        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
-//        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
+        val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
+        val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
+        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
 
-        logger.debug("classpath = $classpath")
-//        logger.debug("modulePath = $modulePath")
-//        logger.debug("testWorkerImplementationModules = $testWorkerImplementationModules")
-//        logger.debug("additionalClassPath = $additionalClassPath")
-//        logger.debug("excludePatterns = ${testFilter.excludePatterns}")
-//        logger.debug("includePatterns = ${testFilter.includePatterns}")
-//        logger.debug("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
+//        logger.debug("classpath = $classpath")
+        println("classpath = $classpath")
+        println("modulePath = $modulePath")
+        println("path = ${testExecutionSpec.path}")
+        println("identityPath = ${testExecutionSpec.identityPath}")
+        println("testWorkerImplementationModules = $testWorkerImplementationModules")
+        println("additionalClassPath = $additionalClassPath")
+        println("excludePatterns = ${testFilter.excludePatterns}")
+        println("includePatterns = ${testFilter.includePatterns}")
+        println("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
 
-        // TODO add support for filters
-//        val fileManager = FileManager(rootProjectDir, gradleUserHomeDir, classpath + setOf(File("/home/ivanbalaksha/work/GradleRemoteTestExecutor/sample-project/junit-platform-console-standalone-1.8.1.jar")), remoteExecutionService)
-//        val fixedClasspath = fileManager.relativePathsFromVirtualRoot()
-//        val mergedClasspath = fixedClasspath.joinToString(":")
-//        val junitPlatformConsole = File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
+        val input = classpath.filter { it.exists() }.map { it.relativeTo(rootProjectDir).path }
+        println("Prepared input: ${input}")
+        val command = Command(
+            identifiers = Identifiers(
+                commandId = "Test Run ${testExecutionSpec.identityPath}",
+                invocationId = UUID.randomUUID().toString(),
+                correlatedInvocationId = "",
+                toolName = "Gradle Remote Execution Plugin",
+                toolVersion = "0.0.1",
+                executionId = "",
+            ),
+            args = emptyList(),
+            execRoot = rootProjectDir.path,
+            workingDir = ".",
+            remoteWorkingDir = ".",
+            inputSpec = InputSpec(
+                inputs = input,
+                virtualInputs = emptyList(),
+                inputExclusions = emptyList(),
+                environmentVariable = mapOf(),
+                symlinkBehavior = SymlinkBehaviorType.ResolveSymlink
+            ),
+            outputFiles = emptyList(),
+            outputDirs = emptyList(),
+            timeout = Duration.ofSeconds(100),
+            platform = mapOf("OSFamily" to "Linux", "platform" to "java8")
+        )
+        val executionOptions =
+            ExecutionOptions(acceptCached = false, doNotCache = true, downloadOutputs = false, downloadOutErr = false)
+
+        remoteExecutionClient.execute(command, executionOptions)
+
+//        val junitPlatformConsole =
+//            File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
 //        val arguments = listOf(
 //            "java",
 //            "-jar",
@@ -53,22 +89,6 @@ class ModuleLevelIsolationAction(
 //            "--reports-dir",
 //            "./report"
 //        )
-//        logger.info("Execute remote action")
-//        val treeMap = TreeMap<String, String>()
-//        treeMap["OSFamily"]="Linux"
-//        treeMap["platform"]="java8"
-//        val config = Config(false, "remote-execution", 600, PlatformConfig(treeMap))
-//        remoteExecutionService.execute(arguments, mapOf(), fileManager.upload(), config)
-
-        val id = "com.tagantroy.test.FastTest#test5()"
-//        val descriptor = DefaultTestDescriptor(id, "com.tagantroy.test.FastTest", "test5")
-//        testResultProcessor.started(descriptor, TestStartEvent(clock.currentTime))
-//        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdOut, "std out example"))
-//        testResultProcessor.output(descriptor, DefaultTestOutputEvent(TestOutputEvent.Destination.StdErr, "std out example"))
-//        testResultProcessor.completed(descriptor, TestCompleteEvent(clock.currentTime))
-//        testResultProcessor
-//        testResultProcessor.failure(id, Throwable("asdf"))
-
     }
 }
 

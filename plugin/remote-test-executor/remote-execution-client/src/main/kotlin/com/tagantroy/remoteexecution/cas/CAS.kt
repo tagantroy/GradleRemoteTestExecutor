@@ -8,13 +8,13 @@ import com.google.protobuf.ByteString
 import com.sun.org.slf4j.internal.LoggerFactory
 import com.tagantroy.merkletree.types.UploadInfoEntry
 import com.tagantroy.merkletree.types.toProto
-import com.tagantroy.remoteexecution.Client
 import java.nio.file.Files
 import java.nio.file.Paths
 
 class CAS(private val cas: ContentAddressableStorageGrpc.ContentAddressableStorageBlockingStub) {
-    private val logger = LoggerFactory.getLogger(Client::class.java)
-    fun findMissing(digests: List<Digest>): List<Digest> {
+    private val logger = LoggerFactory.getLogger(CAS::class.java)
+
+    private fun findMissing(digests: List<Digest>): List<Digest> {
         val req = FindMissingBlobsRequest.newBuilder()
             .addAllBlobDigests(digests).build()
         return cas.findMissingBlobs(req).missingBlobDigestsList

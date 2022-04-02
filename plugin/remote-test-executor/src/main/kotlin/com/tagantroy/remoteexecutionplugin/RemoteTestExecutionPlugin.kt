@@ -75,7 +75,7 @@ fun createRemoteTestExecuter(
     gradleUserHomeDir: File,
 ): RemoteTestExecuter {
     val host = extensions.host.get()
-    val config = Config("", "")
+    val config = Config("localhost:8980", "localhost:8980")
     val service =  com.tagantroy.remoteexecution.Client.fromConfig(config)
     return RemoteTestExecuter(service, moduleRegistry, workerLeaseService, clock, testFilter, projectRoot, buildDir, gradleUserHomeDir)
 }

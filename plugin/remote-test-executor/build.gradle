@@ -54,6 +54,7 @@ gradlePlugin {
 //}
 
 dependencies {
+    implementation project(":common-types")
     implementation project(":remote-execution-client")
     implementation(gradleApi())
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
