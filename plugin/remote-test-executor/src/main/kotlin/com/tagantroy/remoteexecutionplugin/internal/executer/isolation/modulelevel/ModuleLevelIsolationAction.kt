@@ -25,18 +25,19 @@ class ModuleLevelIsolationAction(
     private val buildDir: File,
     private val gradleUserHomeDir: File,
 ) : Runnable {
+
     private val logger = Logging.getLogger(ModuleLevelIsolationAction::class.java)
     override fun run() {
         val testFramework = testExecutionSpec.testFramework
 
-        val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath)
+        val classpath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.classpath.filter { it.exists() })
         val modulePath: Set<File> = ImmutableSet.copyOf(testExecutionSpec.modulePath)
         val testWorkerImplementationModules = testFramework.testWorkerImplementationModules
-        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles
+        val additionalClassPath = moduleRegistry.additionalClassPath.asFiles.filter { it.exists() }
 
-//        logger.debug("classpath = $classpath")
         println("classpath = $classpath")
         println("modulePath = $modulePath")
+        println("gradleUserHomeDir = $gradleUserHomeDir")
         println("path = ${testExecutionSpec.path}")
         println("identityPath = ${testExecutionSpec.identityPath}")
         println("testWorkerImplementationModules = $testWorkerImplementationModules")
@@ -45,8 +46,34 @@ class ModuleLevelIsolationAction(
         println("includePatterns = ${testFilter.includePatterns}")
         println("isFailOnNoMatchingTests = ${testFilter.isFailOnNoMatchingTests}")
 
-        val input = classpath.filter { it.exists() }.map { it.relativeTo(rootProjectDir).path }
-        println("Prepared input: ${input}")
+        val input = classpath.filter { it.startsWith(rootProjectDir) }.map { it.relativeTo(rootProjectDir) }
+            .map { it.toPath().toString() }
+        val gradleUserHomeArtifacts = classpath.filterNot { it.startsWith(rootProjectDir) }.map {
+            VirtualInput(
+                it.relativeTo(gradleUserHomeDir).toString(), it.readBytes(), false, false
+            )
+        }
+
+        println("gradleUserHomeArtifacts: ${gradleUserHomeArtifacts}")
+        println("Input: ${input}")
+        val preparedClassPath = input + gradleUserHomeArtifacts.map { it.path }
+        println("preparedClassPath: ${preparedClassPath}")
+
+
+
+        val junitPlatformConsole =
+            File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
+        val arguments = listOf(
+            "java",
+            "-jar",
+            junitPlatformConsole,
+            "-cp",
+            preparedClassPath.joinToString(":"),
+            "--scan-classpath",
+            "--reports-dir",
+            "./report"
+        )
+
         val command = Command(
             identifiers = Identifiers(
                 commandId = "Test Run ${testExecutionSpec.identityPath}",
@@ -56,13 +83,15 @@ class ModuleLevelIsolationAction(
                 toolVersion = "0.0.1",
                 executionId = "",
             ),
-            args = emptyList(),
+            args = arguments,
             execRoot = rootProjectDir.path,
             workingDir = ".",
             remoteWorkingDir = ".",
             inputSpec = InputSpec(
-                inputs = input,
-                virtualInputs = emptyList(),
+                inputs = input + listOf(
+                    File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
+                ),
+                virtualInputs = gradleUserHomeArtifacts,
                 inputExclusions = emptyList(),
                 environmentVariable = mapOf(),
                 symlinkBehavior = SymlinkBehaviorType.ResolveSymlink
@@ -75,20 +104,8 @@ class ModuleLevelIsolationAction(
         val executionOptions =
             ExecutionOptions(acceptCached = false, doNotCache = true, downloadOutputs = false, downloadOutErr = false)
 
-        remoteExecutionClient.execute(command, executionOptions)
 
-//        val junitPlatformConsole =
-//            File("sample-project/junit-platform-console-standalone-1.8.1.jar").toPath().toString()
-//        val arguments = listOf(
-//            "java",
-//            "-jar",
-//            junitPlatformConsole,
-//            "-cp",
-//            mergedClasspath,
-//            "--scan-classpath",
-//            "--reports-dir",
-//            "./report"
-//        )
+        remoteExecutionClient.execute(command, executionOptions)
     }
 }
 
