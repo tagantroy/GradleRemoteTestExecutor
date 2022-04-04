@@ -1,10 +1,7 @@
 package com.tagantroy.remoteexecution
 
-import build.bazel.remote.execution.v2.Action
+import build.bazel.remote.execution.v2.*
 import build.bazel.remote.execution.v2.Command.EnvironmentVariable
-import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
-import build.bazel.remote.execution.v2.ExecutionGrpc
-import build.bazel.remote.execution.v2.Platform
 import com.sun.org.slf4j.internal.LoggerFactory
 import com.tagantroy.merkletree.MerkleTree
 import com.tagantroy.merkletree.cache.SimpleCache
@@ -18,8 +15,14 @@ import com.tagantroy.remoteexecution.re.RemoteExecution
 import com.tagantroy.types.Command
 import com.tagantroy.types.ExecutionOptions
 import io.grpc.ManagedChannelBuilder
+import java.io.File
+import java.nio.file.Path
 
-class Client(private val remoteExecution: RemoteExecution, private val cas: CAS) {
+class Client(
+    private val remoteExecution: RemoteExecution,
+    private val cas: CAS,
+    val capabilities: CapabilitiesGrpc.CapabilitiesBlockingStub
+) {
     private val logger = LoggerFactory.getLogger(Client::class.java)
 
     companion object {
@@ -36,21 +39,22 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
                 .build()
             val reGRPC = ExecutionGrpc.newBlockingStub(reChannel)
             val re = RemoteExecution(reGRPC)
-            return Client(re, cas)
+            val capabilities = CapabilitiesGrpc.newBlockingStub(reChannel)
+            return Client(re, cas, capabilities)
         }
     }
 
-    fun execute(command: Command, executionOptions: ExecutionOptions) {
+    fun execute(command: Command, executionOptions: ExecutionOptions): ExecuteResponse {
         val cmdId = command.identifiers.commandId
         val executionId = command.identifiers.executionId
         logger.error("$cmdId $executionId > Compute inputs")
         val (actionDigest, inputs) = computeInputs(command)
         logger.error("$cmdId $executionId > Upload if missing")
         cas.uploadIfMissing(inputs)
-        remoteExecution.execute(actionDigest.toProto())
+        return remoteExecution.execute(actionDigest.toProto())
     }
 
-    data class ComputeInputsResponse(
+    private data class ComputeInputsResponse(
         val actionDigest: Digest,
         val uploadInfoEntry: Map<Digest, UploadInfoEntry>
     )
@@ -82,6 +86,19 @@ class Client(private val remoteExecution: RemoteExecution, private val cas: CAS)
         logger.error("$cmdId $executionId > Action digest: $actionDigest")
         val combinedBlobs = inputs + mapOf(cmdPbUe.digest to cmdPbUe, actionPbUe.digest to actionPbUe)
         return ComputeInputsResponse(actionDigest, combinedBlobs)
+    }
+
+    fun downloadFile(digest: build.bazel.remote.execution.v2.Digest): ByteArray {
+        return cas.downloadFile(digest)
+    }
+
+    fun downloadOutputDirectory(root: OutputDirectory, dest: Path) {
+        val res = cas.downloadDirectory(root.treeDigest)
+        val destDir = dest.toFile()
+        destDir.mkdir()
+        res.forEach {
+            File(destDir, it.path).writeBytes(it.data)
+        }
     }
 }
 

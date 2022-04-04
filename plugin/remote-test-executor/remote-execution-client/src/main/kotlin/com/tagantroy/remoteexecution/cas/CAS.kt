@@ -1,14 +1,12 @@
 package com.tagantroy.remoteexecution.cas
 
-import build.bazel.remote.execution.v2.BatchUpdateBlobsRequest
-import build.bazel.remote.execution.v2.ContentAddressableStorageGrpc
-import build.bazel.remote.execution.v2.Digest
-import build.bazel.remote.execution.v2.FindMissingBlobsRequest
+import build.bazel.remote.execution.v2.*
 import com.google.protobuf.ByteString
 import com.sun.org.slf4j.internal.LoggerFactory
 import com.tagantroy.merkletree.types.UploadInfoEntry
 import com.tagantroy.merkletree.types.toProto
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 class CAS(private val cas: ContentAddressableStorageGrpc.ContentAddressableStorageBlockingStub) {
@@ -47,4 +45,44 @@ class CAS(private val cas: ContentAddressableStorageGrpc.ContentAddressableStora
 
     fun batchDownloadBlobs() {
     }
+
+    fun downloadDirectory(rootDigest: Digest): List<DownloadedFiles> {
+        val fetchDirectoryInfoReq = BatchReadBlobsRequest.newBuilder()
+            .addDigests(rootDigest)
+            .setInstanceName("")
+            .build()
+        val fetchDirInfoResponse = cas.batchReadBlobs(fetchDirectoryInfoReq)
+        val tree = Tree.parseFrom(fetchDirInfoResponse.responsesList.first().data)
+        val rootDirectory = tree.root
+        val filesMap = rootDirectory.filesList.map { it.digest to it.name }.toMap()
+        val fetchFilesRequest = BatchReadBlobsRequest.newBuilder()
+            .addAllDigests(filesMap.keys)
+            .setInstanceName("")
+            .build()
+        val fetchFilesResponse = cas.batchReadBlobs(fetchFilesRequest)
+        return fetchFilesResponse.responsesList.map {
+            DownloadedFiles(filesMap[it.digest]!!, it.data.toByteArray())
+        }
+    }
+
+    data class DownloadedFiles(
+        val path: String,
+        val data: ByteArray
+    )
+
+
+    fun flattenTree() {
+
+    }
+
+    fun downloadFile(digest: Digest): ByteArray {
+        val req = BatchReadBlobsRequest.newBuilder()
+            .setInstanceName("")
+            .addDigests(digest)
+            .build()
+        val res = cas.batchReadBlobs(req)
+        val downloadedFile = res.responsesList.first()
+        return downloadedFile.data.toByteArray()
+    }
+
 }

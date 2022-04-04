@@ -5,10 +5,8 @@ import com.tagantroy.remoteexecution.Client
 import com.tagantroy.types.*
 import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.tasks.testing.JvmTestExecutionSpec
-import org.gradle.api.internal.tasks.testing.TestResultProcessor
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.testing.TestFilter
-import org.gradle.internal.time.Clock
 import java.io.File
 import java.time.Duration
 import java.util.*
@@ -16,12 +14,11 @@ import java.util.*
 class ModuleLevelIsolationAction(
     private val remoteExecutionClient: Client,
     private val testExecutionSpec: JvmTestExecutionSpec,
-    private val testResultProcessor: TestResultProcessor,
     private val testFilter: TestFilter,
     private val moduleRegistry: ModuleRegistry,
-    private val clock: Clock,
     private val rootProjectDir: File,
     private val gradleUserHomeDir: File,
+    private val buildDir: File,
     private val invocationId: String,
 ) : Runnable {
 
@@ -87,14 +84,32 @@ class ModuleLevelIsolationAction(
                 symlinkBehavior = SymlinkBehaviorType.ResolveSymlink
             ),
             outputFiles = emptyList(),
-            outputDirs = listOf("./report"),
+            outputDirs = listOf("./report/"),
             timeout = Duration.ofSeconds(100),
             platform = mapOf("OSFamily" to "Linux", "platform" to "java8")
         )
         val executionOptions =
             ExecutionOptions(acceptCached = false, doNotCache = true, downloadOutputs = false, downloadOutErr = false)
 
-        remoteExecutionClient.execute(command, executionOptions)
+        val result = remoteExecutionClient.execute(command, executionOptions)
+        val stdout = remoteExecutionClient.downloadFile(result.result.stdoutDigest).decodeToString()
+        val stderr = remoteExecutionClient.downloadFile(result.result.stderrDigest).decodeToString()
+        println(stdout.removePrefix("stdout message"))
+        System.err.println(stderr.removePrefix("error message"))
+
+        val reportsDir = File(buildDir, "test-results")
+        reportsDir.mkdir()
+        val testReports = File(reportsDir, "remote-execution-test-reports")
+        testReports.delete()
+        testReports.mkdir()
+        remoteExecutionClient.downloadOutputDirectory(
+            result.result.outputDirectoriesList.first(),
+            testReports.toPath()
+        )
+
+        if (result.result.exitCode != 0) {
+            throw RuntimeException("Exit code: ${result.result.exitCode}")
+        }
     }
 }
 
